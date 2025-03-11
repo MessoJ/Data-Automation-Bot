@@ -14,8 +14,8 @@ A Python-based bot that automates data preprocessing and reporting, integrating 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/data-automation-bot.git
-   cd data-automation-bot
+   git clone https://github.com/messoj/Data-Automation-Bot.git
+   cd Data-Automation-Bot
    ```
 
 2. Create and activate a virtual environment

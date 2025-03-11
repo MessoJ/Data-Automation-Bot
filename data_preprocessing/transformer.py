@@ -15,7 +15,7 @@ import numpy as np
 from datetime import datetime
 import json
 
-from data_automation_bot.utils.helpers import handle_exceptions
+from utils.helpers import handle_exceptions
 
 class DataTransformer:
     """Class for transforming cleaned data."""

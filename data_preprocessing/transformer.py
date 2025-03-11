@@ -138,7 +138,7 @@ class DataTransformer:
             if std_val > 0:
                 df[f"{column}_normalized"] = (df[column] - mean_val) / std_val
                 logging.debug(f"Created z-score normalized version of '{column}'")
-return df
+        return df
     
     def _aggregate_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -183,8 +183,7 @@ return df
                 df = pd.merge(df, grouped, on=group_col, how='left')
                 
                 logging.debug(f"Added {len(grouped.columns) - 1} aggregated columns")
-        
-return df
+        return df
     
     def _standardize_format(self, df: pd.DataFrame) -> pd.DataFrame:
         """

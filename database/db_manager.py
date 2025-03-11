@@ -29,11 +29,11 @@ class DatabaseManager:
             self.connection_string = connection_string
         else:
             # Build connection string from environment variables
-            db_host = os.getenv("DB_HOST", "localhost")
+            db_host = os.getenv("DB_HOST", "database-1.cxwa0k264rkw.eu-north-1.rds.amazonaws.com")
             db_port = os.getenv("DB_PORT", "5432")
-            db_name = os.getenv("DB_NAME")
-            db_user = os.getenv("DB_USER")
-            db_password = os.getenv("DB_PASSWORD")
+            db_name = os.getenv("database-1")
+            db_user = os.getenv("postgres")
+            db_password = os.getenv("Minaa.2030")
             
             if not all([db_name, db_user, db_password]):
                 raise ValueError("Database credentials not found in environment variables")

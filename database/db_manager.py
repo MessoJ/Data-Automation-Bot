@@ -1,161 +1,180 @@
-import os
-import pandas as pd
-import logging
-from sqlalchemy import create_engine, text, MetaData, Table, inspect
-from sqlalchemy.exc import SQLAlchemyError
-from dotenv import load_dotenv
+"""
+Database Manager for handling all database operations.
 
-logger = logging.getLogger(__name__)
+This module manages database connections, schema creation/updates,
+and data operations for storing and retrieving processed data.
+"""
+
+import logging
+from typing import Dict, List, Any, Optional
+import sqlalchemy as sa
+from sqlalchemy.orm import sessionmaker, declarative_base
+from contextlib import contextmanager
+from datetime import datetime
+
+import config as config
+from utils.helpers import handle_exceptions
+
+# Define base model class
+Base = declarative_base()
+
+# Define data model
+class ProcessedData(Base):
+    """Model representing processed data in the database."""
+    
+    __tablename__ = "processed_data"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    source_id = sa.Column(sa.String(100), nullable=False, index=True)
+    data_type = sa.Column(sa.String(50), nullable=False)
+    value = sa.Column(sa.Float)
+    timestamp = sa.Column(sa.DateTime, default=datetime.now)
+    metadata = sa.Column(sa.JSON)
+    processed_at = sa.Column(sa.DateTime, default=datetime.now)
+    
+    def __repr__(self):
+        return f"<ProcessedData(id={self.id}, source_id='{self.source_id}', type='{self.data_type}')>"
+
+# Add more models as needed
+class DataSource(Base):
+    """Model representing data sources."""
+    
+    __tablename__ = "data_sources"
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String(100), nullable=False, unique=True)
+    description = sa.Column(sa.Text)
+    api_endpoint = sa.Column(sa.String(200))
+    is_active = sa.Column(sa.Boolean, default=True)
+    created_at = sa.Column(sa.DateTime, default=datetime.now)
+    last_updated = sa.Column(sa.DateTime, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f"<DataSource(id={self.id}, name='{self.name}')>"
 
 class DatabaseManager:
-    """
-    Class for managing database connections and operations.
-    Provides methods for querying, inserting, and updating data.
-    """
+    """Manager for database operations."""
     
-    def __init__(self, connection_string=None):
+    def __init__(self, conn_string: str = None):
         """
-        Initialize the DatabaseManager with a connection string.
-        
-        If no connection string is provided, attempts to build one from
-        environment variables.
+        Initialize the database manager.
         
         Args:
-            connection_string (str, optional): SQLAlchemy connection string.
+            conn_string: Database connection string. Defaults to config value.
         """
-        load_dotenv()
-        
-        if connection_string:
-            self.connection_string = connection_string
-        else:
-            # Build connection string from environment variables
-            db_host = os.getenv("DB_HOST", "database-1.cxwa0k264rkw.eu-north-1.rds.amazonaws.com")
-            db_port = os.getenv("DB_PORT", "5432")
-            db_name = os.getenv("database-1")
-            db_user = os.getenv("postgres")
-            db_password = os.getenv("Minaa.2030")
-            
-            if not all([db_name, db_user, db_password]):
-                raise ValueError("Database credentials not found in environment variables")
-            
-            self.connection_string = (
-                f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-            )
-        
+        self.conn_string = conn_string or config.DB_CONN_STRING
         self.engine = None
-        self.metadata = MetaData()
-        logger.info("DatabaseManager initialized")
-    
-    def connect(self):
-        """
-        Establish a connection to the database.
+        self.Session = None
+        self._initialize_engine()
         
-        Returns:
-            bool: True if connection successful, False otherwise.
-        """
+    def _initialize_engine(self):
+        """Initialize the SQLAlchemy engine and session factory."""
+        self.engine = sa.create_engine(self.conn_string)
+        self.Session = sessionmaker(bind=self.engine)
+        
+    @contextmanager
+    def get_session(self):
+        """Get a database session using context manager for automatic cleanup."""
+        session = self.Session()
         try:
-            self.engine = create_engine(self.connection_string)
-            # Test connection
-            with self.engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            logger.info("Successfully connected to database")
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Database connection error: {str(e)}")
-            return False
+            yield session
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logging.error(f"Database error: {str(e)}")
+            raise
+        finally:
+            session.close()
     
-    def execute_query(self, query, params=None):
+    @handle_exceptions
+    def initialize_database(self):
+        """Create database tables if they don't exist."""
+        logging.info("Initializing database schema")
+        Base.metadata.create_all(self.engine)
+        logging.info("Database schema initialized successfully")
+    
+    @handle_exceptions
+    def store_data(self, data_records: List[Dict[str, Any]]):
         """
-        Execute a SQL query and return the results as a DataFrame.
+        Store processed data records in the database.
         
         Args:
-            query (str): SQL query to execute.
-            params (dict, optional): Parameters for the query.
-        
-        Returns:
-            pd.DataFrame: Query results as a DataFrame.
+            data_records: List of processed data records to store.
         """
-        if self.engine is None and not self.connect():
-            raise ConnectionError("Database connection not established")
-        
-        try:
-            logger.info(f"Executing query: {query}")
-            if params:
-                result = pd.read_sql(text(query), self.engine, params=params)
-            else:
-                result = pd.read_sql(text(query), self.engine)
+        if not data_records:
+            logging.warning("No data records to store")
+            return
             
-            logger.info(f"Query returned {len(result)} rows")
-            return result
-        except SQLAlchemyError as e:
-            logger.error(f"Query execution error: {str(e)}")
-            raise
+        logging.info(f"Storing {len(data_records)} records in database")
+        
+        # Convert dictionary records to ORM objects
+        db_objects = []
+        for record in data_records:
+            db_obj = ProcessedData(
+                source_id=record.get("source_id", "unknown"),
+                data_type=record.get("data_type", "unknown"),
+                value=record.get("value"),
+                timestamp=record.get("timestamp", datetime.now()),
+                metadata=record.get("metadata", {})
+            )
+            db_objects.append(db_obj)
+        
+        # Store in batches to avoid memory issues with large datasets
+        batch_size = config.DATA_BATCH_SIZE
+        with self.get_session() as session:
+            for i in range(0, len(db_objects), batch_size):
+                batch = db_objects[i:i + batch_size]
+                session.add_all(batch)
+                session.flush()
+                logging.debug(f"Stored batch of {len(batch)} records")
+        
+        logging.info(f"Successfully stored {len(data_records)} records in database")
     
-    def execute_statement(self, statement, params=None):
+    @handle_exceptions
+    def get_data(self, data_type: Optional[str] = None, 
+                 start_date: Optional[datetime] = None,
+                 end_date: Optional[datetime] = None,
+                 limit: int = 1000) -> List[Dict[str, Any]]:
         """
-        Execute a SQL statement (INSERT, UPDATE, DELETE).
+        Retrieve data from the database with optional filtering.
         
         Args:
-            statement (str): SQL statement to execute.
-            params (dict, optional): Parameters for the statement.
-        
+            data_type: Filter by data type.
+            start_date: Filter by start date.
+            end_date: Filter by end date.
+            limit: Maximum number of records to return.
+            
         Returns:
-            int: Number of rows affected.
+            List of data records as dictionaries.
         """
-        if self.engine is None and not self.connect():
-            raise ConnectionError("Database connection not established")
-        
-        try:
-            with self.engine.connect() as conn:
-                with conn.begin():
-                    if params:
-                        result = conn.execute(text(statement), params)
-                    else:
-                        result = conn.execute(text(statement))
-                    
-                    row_count = result.rowcount
-                    logger.info(f"Statement affected {row_count} rows")
-                    return row_count
-        except SQLAlchemyError as e:
-            logger.error(f"Statement execution error: {str(e)}")
-            raise
-    
-    def get_table_schema(self, table_name):
-        """
-        Get the schema of a table.
-        
-        Args:
-            table_name (str): Name of the table.
-        
-        Returns:
-            dict: Column information for the table.
-        """
-        if self.engine is None and not self.connect():
-            raise ConnectionError("Database connection not established")
-        
-        try:
-            inspector = inspect(self.engine)
-            columns = inspector.get_columns(table_name)
-            logger.info(f"Retrieved schema for table '{table_name}'")
-            return columns
-        except SQLAlchemyError as e:
-            logger.error(f"Error retrieving table schema: {str(e)}")
-            raise
-    
-    def list_tables(self):
-        """
-        List all tables in the database.
-        
-        Returns:
-            list: Names of all tables in the database.
-        """
-        if self.engine is None and not self.connect():
-            raise ConnectionError("Database connection not established")
-        
-        try:
-            inspector = inspect(self.engine)
-            tables = inspector.get_table_names()
-            logger.info(f"Listed {len(tables)} tables in database")
-            return tables
-        except SQLAlchemyError as e:
-            logger.error(f"Error listing tables: {str(e)}")
+        with self.get_session() as session:
+            query = session.query(ProcessedData)
+            
+            # Apply filters
+            if data_type:
+                query = query.filter(ProcessedData.data_type == data_type)
+            if start_date:
+                query = query.filter(ProcessedData.timestamp >= start_date)
+            if end_date:
+                query = query.filter(ProcessedData.timestamp <= end_date)
+                
+            # Apply limit and order
+            query = query.order_by(ProcessedData.timestamp.desc()).limit(limit)
+            
+            # Execute query
+            results = query.all()
+            
+            # Convert ORM objects to dictionaries
+            data_records = []
+            for result in results:
+                data_records.append({
+                    "id": result.id,
+                    "source_id": result.source_id,
+                    "data_type": result.data_type,
+                    "value": result.value,
+                    "timestamp": result.timestamp,
+                    "metadata": result.metadata,
+                    "processed_at": result.processed_at
+                })
+            
+            return data_records

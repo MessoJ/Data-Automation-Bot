@@ -233,7 +233,23 @@ def handle_exceptions(func):
             logging.error(f"Exception in {func.__name__}: {e}", exc_info=True)
             raise
     return wrapper
+
+def setup_logging(log_file="data_automation.log", level=logging.INFO):
+    """
+    Set up logging configuration.
     
+    Args:
+        log_file: Name of the log file.
+        level: Logging level.
+    """
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
 def read_data_file(file_path):
     """
     Read data from various file types into a pandas DataFrame.

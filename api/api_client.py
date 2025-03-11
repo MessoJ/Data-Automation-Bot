@@ -1,253 +1,130 @@
-import os
-import requests
-import json
-import pandas as pd
-import logging
-import time
-from dotenv import load_dotenv
+"""
+API Client for interacting with external data sources.
 
-logger = logging.getLogger(__name__)
+This module handles authentication, request formation, 
+data fetching, and error handling when communicating with APIs.
+"""
+
+import logging
+import requests
+import time
+from typing import Dict, List, Optional, Any
+
+import data_automation_bot.config as config
+from data_automation_bot.utils.helpers import handle_exceptions
 
 class APIClient:
-    """
-    Class for handling API interactions.
-    Provides methods for fetching, posting and processing API data.
-    """
+    """Client for interacting with the data source API."""
     
-    def __init__(self, base_url=None, api_key=None, api_secret=None):
+    def __init__(self, base_url: str = None, api_key: str = None, timeout: int = None):
         """
-        Initialize the APIClient with connection parameters.
-        
-        If parameters are not provided, attempts to load from environment variables.
+        Initialize the API client.
         
         Args:
-            base_url (str, optional): Base URL for the API.
-            api_key (str, optional): API key for authentication.
-            api_secret (str, optional): API secret for authentication.
+            base_url: The base URL for the API. Defaults to config value.
+            api_key: The API key for authentication. Defaults to config value.
+            timeout: Request timeout in seconds. Defaults to config value.
         """
-        load_dotenv()
-        
-        self.base_url = base_url or os.getenv("API_BASE_URL")
-        self.api_key = api_key or os.getenv("API_KEY")
-        self.api_secret = api_secret or os.getenv("API_SECRET")
-        
-        if not self.base_url:
-            raise ValueError("API base URL not provided or found in environment variables")
-        
+        self.base_url = base_url or config.API_BASE_URL
+        self.api_key = api_key or config.API_KEY
+        self.timeout = timeout or config.API_TIMEOUT
         self.session = requests.Session()
         
-        # Set up authentication if credentials are provided
-        if self.api_key and self.api_secret:
-            self.session.headers.update({
-                "Authorization": f"Bearer {self.api_key}",
-                "x-api-secret": self.api_secret,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            })
+        # Set default headers
+        self.session.headers.update({
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        })
         
-        # Default rate limiting settings
-        self.rate_limit = 60  # requests per minute
-        self.request_count = 0
-        self.last_request_time = time.time()
-        
-        logger.info("APIClient initialized")
+        logging.debug(f"Initialized API client with base URL: {self.base_url}")
     
-    def get(self, endpoint, params=None, timeout=30, rate_limit=True):
+    @handle_exceptions
+    def fetch_data(self, endpoint: str = "/data", params: Dict = None) -> List[Dict]:
         """
-        Make a GET request to the API.
+        Fetch data from the API endpoint.
         
         Args:
-            endpoint (str): API endpoint to request.
-            params (dict, optional): Query parameters for the request.
-            timeout (int, optional): Request timeout in seconds.
-            rate_limit (bool, optional): Whether to apply rate limiting.
-        
-        Returns:
-            dict: JSON response from the API.
-        """
-        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
-        
-        # Apply rate limiting if enabled
-        if rate_limit:
-            self._apply_rate_limiting()
-        
-        try:
-            logger.info(f"Making GET request to {url}")
-            response = self.session.get(url, params=params, timeout=timeout)
-            response.raise_for_status()  # Raise exception for 4XX/5XX responses
+            endpoint: API endpoint path. Defaults to "/data".
+            params: Query parameters for the request.
             
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"API request error: {str(e)}")
-            raise
-    
-    def post(self, endpoint, data, timeout=30, rate_limit=True):
+        Returns:
+            List of data records as dictionaries.
         """
-        Make a POST request to the API.
+        url = f"{self.base_url}{endpoint}"
+        params = params or {}
+        
+        logging.info(f"Fetching data from {url}")
+        logging.debug(f"Request parameters: {params}")
+        
+        response = self.session.get(url, params=params, timeout=self.timeout)
+        response.raise_for_status()
+        
+        data = response.json()
+        logging.info(f"Successfully fetched {len(data)} records")
+        
+        return data
+    
+    @handle_exceptions
+    def post_data(self, endpoint: str, data: Dict) -> Dict:
+        """
+        Post data to the API endpoint.
         
         Args:
-            endpoint (str): API endpoint to request.
-            data (dict): Data to send in the request body.
-            timeout (int, optional): Request timeout in seconds.
-            rate_limit (bool, optional): Whether to apply rate limiting.
-        
-        Returns:
-            dict: JSON response from the API.
-        """
-        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
-        
-        # Apply rate limiting if enabled
-        if rate_limit:
-            self._apply_rate_limiting()
-        
-        try:
-            logger.info(f"Making POST request to {url}")
-            response = self.session.post(url, json=data, timeout=timeout)
-            response.raise_for_status()  # Raise exception for 4XX/5XX responses
+            endpoint: API endpoint path.
+            data: Data to send in the request body.
             
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"API request error: {str(e)}")
-            raise
+        Returns:
+            Response data as dictionary.
+        """
+        url = f"{self.base_url}{endpoint}"
+        
+        logging.info(f"Posting data to {url}")
+        response = self.session.post(url, json=data, timeout=self.timeout)
+        response.raise_for_status()
+        
+        return response.json()
     
-    def _apply_rate_limiting(self):
+    @handle_exceptions
+    def paginated_fetch(self, endpoint: str, page_size: int = 100) -> List[Dict]:
         """
-        Apply rate limiting to prevent exceeding API limits.
-        
-        This method keeps track of requests and adds delays when necessary
-        to stay within the configured rate limit.
-        """
-        current_time = time.time()
-        time_passed = current_time - self.last_request_time
-        
-        # If we've made a request recently, check if we need to throttle
-        if self.request_count > 0:
-            # Reset counter if a minute has passed
-            if time_passed > 60:
-                self.request_count = 0
-                self.last_request_time = current_time
-            # If we're approaching the rate limit, add a delay
-            elif self.request_count >= self.rate_limit:
-                sleep_time = 60 - time_passed
-                if sleep_time > 0:
-                    logger.info(f"Rate limit approached. Sleeping for {sleep_time:.2f} seconds")
-                    time.sleep(sleep_time)
-                    self.request_count = 0
-                    self.last_request_time = time.time()
-        
-        # Increment the request counter
-        self.request_count += 1
-    
-    def fetch_data_to_dataframe(self, endpoint, params=None, data_path=None):
-        """
-        Fetch data from the API and convert it to a pandas DataFrame.
+        Fetch data from paginated API endpoints.
         
         Args:
-            endpoint (str): API endpoint to request.
-            params (dict, optional): Query parameters for the request.
-            data_path (str, optional): JSON path to the data array in the response.
-                For example, 'data.items' would extract response['data']['items'].
-        
+            endpoint: API endpoint path.
+            page_size: Number of records per page.
+            
         Returns:
-            pd.DataFrame: DataFrame containing the API data.
-        """
-        try:
-            response_data = self.get(endpoint, params=params)
-            
-            # Extract data from the specified path if provided
-            if data_path:
-                data = response_data
-                for key in data_path.split('.'):
-                    data = data.get(key, {})
-                
-                if not data:
-                    logger.warning(f"No data found at path '{data_path}' in API response")
-                    return pd.DataFrame()
-            else:
-                data = response_data
-            
-            # Convert to DataFrame
-            if isinstance(data, list):
-                df = pd.DataFrame(data)
-            else:
-                # If it's not a list, try to convert it to a DataFrame with a single row
-                df = pd.DataFrame([data])
-            
-            logger.info(f"Successfully converted API data to DataFrame with shape {df.shape}")
-            return df
-        except Exception as e:
-            logger.error(f"Error converting API data to DataFrame: {str(e)}")
-            raise
-    
-    def paginated_fetch(self, endpoint, params=None, data_path=None, 
-                        page_param='page', limit_param='limit', limit=100, 
-                        max_pages=None):
-        """
-        Fetch paginated data from the API and combine into a single DataFrame.
-        
-        Args:
-            endpoint (str): API endpoint to request.
-            params (dict, optional): Query parameters for the request.
-            data_path (str, optional): JSON path to the data array in the response.
-            page_param (str, optional): Name of the pagination parameter.
-            limit_param (str, optional): Name of the limit parameter.
-            limit (int, optional): Number of items per page.
-            max_pages (int, optional): Maximum number of pages to fetch.
-        
-        Returns:
-            pd.DataFrame: Combined DataFrame containing all paginated data.
+            List of all data records across pages.
         """
         all_data = []
         page = 1
+        has_more = True
         
-        # Initialize params if None
-        params = params or {}
-        
-        while True:
-            # Update pagination parameters
-            current_params = params.copy()
-            current_params[page_param] = page
-            current_params[limit_param] = limit
+        while has_more:
+            params = {
+                "page": page,
+                "limit": page_size
+            }
             
-            try:
-                logger.info(f"Fetching page {page} from API")
-                response_data = self.get(endpoint, params=current_params)
-                
-                # Extract data from the specified path if provided
-                if data_path:
-                    data = response_data
-                    for key in data_path.split('.'):
-                        data = data.get(key, {})
-                else:
-                    data = response_data
-                
-                # If we get an empty result or not a list, break the loop
-                if not data or not isinstance(data, list) or len(data) == 0:
-                    break
-                
-                all_data.extend(data)
-                logger.info(f"Retrieved {len(data)} items from page {page}")
-                
-                # Break if we received fewer items than the limit (last page)
-                if len(data) < limit:
-                    break
-                
-                # Break if we've reached the maximum number of pages
-                if max_pages and page >= max_pages:
-                    logger.info(f"Reached maximum number of pages ({max_pages})")
-                    break
-                
-                page += 1
-                
-            except Exception as e:
-                logger.error(f"Error fetching page {page}: {str(e)}")
-                break
+            response = self.session.get(
+                f"{self.base_url}{endpoint}", 
+                params=params,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            records = data.get("data", [])
+            all_data.extend(records)
+            
+            # Check if we need to fetch more pages
+            has_more = data.get("has_more", False)
+            page += 1
+            
+            # Avoid hitting rate limits
+            if has_more:
+                time.sleep(0.5)
         
-        # Convert combined data to DataFrame
-        if all_data:
-            df = pd.DataFrame(all_data)
-            logger.info(f"Successfully combined {len(all_data)} items into DataFrame")
-            return df
-        else:
-            logger.warning("No data retrieved from paginated API requests")
-            return pd.DataFrame()
+        logging.info(f"Fetched {len(all_data)} total records across {page-1} pages")
+        return all_data

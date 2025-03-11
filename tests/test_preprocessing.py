@@ -165,4 +165,81 @@ class TestDataTransformer(unittest.TestCase):
         # Check values
         self.assertEqual(result_df.loc[0, 'full_name'], 'John Smith')
         self.assertEqual(result_df.loc[0, 'salary_category'], 'Low')
-        self.assertEqual(result_df.loc[2,
+        self.assertEqual(result_df.loc[2, 'salary_category'], 'High')
+    
+    def test_apply_one_hot_encoding(self):
+        """Test one-hot encoding categorical variables."""
+        # Apply one-hot encoding
+        result_df = self.transformer.apply_one_hot_encoding(
+            self.sample_df,
+            columns=['department']
+        )
+        
+        # Verify one-hot encoded columns
+        self.assertTrue('department_Sales' in result_df.columns)
+        self.assertTrue('department_IT' in result_df.columns)
+        self.assertTrue('department_HR' in result_df.columns)
+        
+        # Check values
+        self.assertEqual(result_df.loc[0, 'department_Sales'], 1)
+        self.assertEqual(result_df.loc[0, 'department_IT'], 0)
+        self.assertEqual(result_df.loc[1, 'department_IT'], 1)
+    
+    def test_apply_scaling(self):
+        """Test scaling numerical features."""
+        # Apply scaling
+        result_df = self.transformer.apply_scaling(
+            self.sample_df,
+            columns=['age', 'salary'],
+            method='min-max'
+        )
+        
+        # Verify scaling
+        self.assertTrue(result_df['age'].min() >= 0)
+        self.assertTrue(result_df['age'].max() <= 1)
+        self.assertTrue(result_df['salary'].min() >= 0)
+        self.assertTrue(result_df['salary'].max() <= 1)
+    
+    def test_apply_log_transform(self):
+        """Test applying log transformation."""
+        # Apply log transformation
+        result_df = self.transformer.apply_log_transform(
+            self.sample_df,
+            columns=['salary']
+        )
+        
+        # Verify transformation
+        self.assertTrue('salary_log' in result_df.columns)
+        
+        # Check values
+        import numpy as np
+        expected_value = np.log(50000)
+        self.assertAlmostEqual(result_df.loc[0, 'salary_log'], expected_value)
+    
+    def test_aggregate_data(self):
+        """Test data aggregation."""
+        # Aggregate data
+        result_df = self.transformer.aggregate_data(
+            self.sample_df,
+            group_by='department',
+            aggregations={
+                'salary': ['mean', 'max', 'min', 'count'],
+                'age': ['mean', 'max']
+            }
+        )
+        
+        # Verify aggregated columns
+        self.assertTrue('salary_mean' in result_df.columns)
+        self.assertTrue('salary_max' in result_df.columns)
+        self.assertTrue('age_mean' in result_df.columns)
+        
+        # Check values
+        sales_rows = self.sample_df[self.sample_df['department'] == 'Sales']
+        expected_salary_mean = sales_rows['salary'].mean()
+        self.assertAlmostEqual(
+            result_df.loc['Sales', 'salary_mean'],
+            expected_salary_mean
+        )
+
+if __name__ == '__main__':
+    unittest.main()

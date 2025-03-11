@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import json
 from unittest.mock import patch, MagicMock, mock_open
-from data_automation_bot.reporting.report_generator import ReportGenerator
+from reporting.report_generator import ReportGenerator
 
 class TestReportGenerator(unittest.TestCase):
     """Test cases for the ReportGenerator class."""

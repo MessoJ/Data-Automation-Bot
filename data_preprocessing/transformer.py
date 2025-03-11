@@ -1,266 +1,289 @@
+"""
+Data Transformer for handling data transformation operations.
+
+This module provides functionality to transform cleaned data by:
+- Feature engineering
+- Data normalization and scaling
+- Data aggregation
+- Format conversion
+"""
+
+import logging
+from typing import Dict, List, Any, Union, Optional
 import pandas as pd
 import numpy as np
-import logging
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer
+from datetime import datetime
+import json
 
-logger = logging.getLogger(__name__)
+from data_automation_bot.utils.helpers import handle_exceptions
 
 class DataTransformer:
-    """
-    Class for transforming cleaned data into a format suitable for analysis and reporting.
-    Handles feature engineering, normalization, encoding, etc.
-    """
+    """Class for transforming cleaned data."""
     
-    def __init__(self, config=None):
+    def __init__(self):
+        """Initialize the data transformer."""
+        logging.debug("Initializing DataTransformer")
+    
+    @handle_exceptions
+    def transform(self, cleaned_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Initialize the DataTransformer with optional configuration.
+        Transform cleaned data records.
         
         Args:
-            config (dict, optional): Configuration options for transformation.
-        """
-        self.config = config or {}
-        self.encoders = {}
-        self.scalers = {}
-        logger.info("DataTransformer initialized")
-    
-    def transform_dataframe(self, df, transformations=None):
-        """
-        Transform a pandas DataFrame using specified transformations.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to transform.
-            transformations (dict, optional): Transformation strategies to apply.
-                Example: {'normalize': ['col1', 'col2'], 'encode': ['col3']}
-        
-        Returns:
-            pd.DataFrame: The transformed DataFrame.
-        """
-        if df.empty:
-            logger.warning("Empty DataFrame provided for transformation")
-            return df
-        
-        transformations = transformations or {}
-        
-        logger.info(f"Transforming DataFrame with shape {df.shape}")
-        
-        # Make a copy to avoid modifying the original
-        transformed_df = df.copy()
-        
-        # Apply transformations
-        if 'normalize' in transformations:
-            transformed_df = self._normalize_columns(
-                transformed_df, 
-                transformations['normalize']
-            )
-        
-        if 'encode' in transformations:
-            transformed_df = self._encode_categorical(
-                transformed_df, 
-                transformations['encode']
-            )
-        
-        if 'date_features' in transformations:
-            transformed_df = self._extract_date_features(
-                transformed_df, 
-                transformations['date_features']
-            )
-        
-        if 'custom' in transformations:
-            for custom_transform in transformations['custom']:
-                transformed_df = custom_transform(transformed_df)
-        
-        logger.info(f"Transformation complete. Resulting shape: {transformed_df.shape}")
-        return transformed_df
-    
-    def _normalize_columns(self, df, columns, method='standard'):
-        """
-        Normalize numeric columns.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            columns (list): List of columns to normalize.
-            method (str): Normalization method ('standard', 'minmax').
-        
-        Returns:
-            pd.DataFrame: DataFrame with normalized columns.
-        """
-        # Filter to only include numeric columns that exist in the dataframe
-        numeric_cols = df.select_dtypes(include=['number']).columns
-        columns_to_normalize = [col for col in columns if col in numeric_cols]
-        
-        if not columns_to_normalize:
-            logger.warning("No valid numeric columns provided for normalization")
-            return df
-        
-        logger.info(f"Normalizing columns: {columns_to_normalize} using {method} method")
-        
-        # Select the appropriate scaler
-        if method == 'standard':
-            for col in columns_to_normalize:
-                if col not in self.scalers:
-                    self.scalers[col] = StandardScaler()
-                    df[col] = self.scalers[col].fit_transform(df[[col]])
-                else:
-                    df[col] = self.scalers[col].transform(df[[col]])
-        elif method == 'minmax':
-            for col in columns_to_normalize:
-                if col not in self.scalers:
-                    self.scalers[col] = MinMaxScaler()
-                    df[col] = self.scalers[col].fit_transform(df[[col]])
-                else:
-                    df[col] = self.scalers[col].transform(df[[col]])
-        
-        return df
-    
-    def _encode_categorical(self, df, columns, method='onehot'):
-        """
-        Encode categorical columns.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            columns (list): List of categorical columns to encode.
-            method (str): Encoding method ('onehot', 'label', 'ordinal').
-        
-        Returns:
-            pd.DataFrame: DataFrame with encoded columns.
-        """
-        # Check that columns exist in the dataframe
-        columns_to_encode = [col for col in columns if col in df.columns]
-        
-        if not columns_to_encode:
-            logger.warning("No valid categorical columns provided for encoding")
-            return df
-        
-        logger.info(f"Encoding columns: {columns_to_encode} using {method} method")
-        
-        if method == 'onehot':
-            for col in columns_to_encode:
-                if col not in self.encoders:
-                    self.encoders[col] = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-                    encoded = self.encoders[col].fit_transform(df[[col]])
-                else:
-                    encoded = self.encoders[col].transform(df[[col]])
-                
-                # Create column names for the encoded features
-                encoded_cols = [f"{col}_{cat}" for cat in self.encoders[col].categories_[0]]
-                
-                # Add the encoded columns to the dataframe
-                encoded_df = pd.DataFrame(encoded, columns=encoded_cols, index=df.index)
-                df = pd.concat([df, encoded_df], axis=1)
-                
-                # Drop the original column
-                df = df.drop(columns=[col])
-        
-        elif method == 'label':
-            for col in columns_to_encode:
-                # For label encoding, we'll just convert categories to integers
-                df[col] = pd.Categorical(df[col]).codes
-        
-        return df
-    
-    def _extract_date_features(self, df, date_columns):
-        """
-        Extract useful features from date columns.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            date_columns (list): List of date columns to process.
-        
-        Returns:
-            pd.DataFrame: DataFrame with extracted date features.
-        """
-        for col in date_columns:
-            if col not in df.columns:
-                logger.warning(f"Date column '{col}' not found in DataFrame")
-                continue
+            cleaned_data: List of cleaned data records to transform.
             
-            logger.info(f"Extracting date features from column '{col}'")
-            
-            # Try to convert to datetime if not already
-            if not pd.api.types.is_datetime64_dtype(df[col]):
-                try:
-                    df[col] = pd.to_datetime(df[col])
-                except:
-                    logger.warning(f"Failed to convert column '{col}' to datetime")
-                    continue
-            
-            # Extract date components
-            df[f"{col}_year"] = df[col].dt.year
-            df[f"{col}_month"] = df[col].dt.month
-            df[f"{col}_day"] = df[col].dt.day
-            df[f"{col}_dayofweek"] = df[col].dt.dayofweek
-            df[f"{col}_quarter"] = df[col].dt.quarter
-            
-            # Create is_weekend feature
-            df[f"{col}_is_weekend"] = df[col].dt.dayofweek >= 5
-        
-        return df
-    
-    def add_aggregations(self, df, group_by, agg_columns, agg_functions=None):
+        Returns:
+            List of transformed data records.
         """
-        Add aggregated features to the DataFrame.
+        if not cleaned_data:
+            logging.warning("No data to transform")
+            return []
+            
+        logging.info(f"Transforming {len(cleaned_data)} cleaned data records")
+        
+        # Convert to pandas DataFrame for easier manipulation
+        df = pd.DataFrame(cleaned_data)
+        
+        # Apply transformation operations
+        df = self._engineer_features(df)
+        df = self._normalize_and_scale(df)
+        df = self._aggregate_data(df)
+        df = self._standardize_format(df)
+        
+        # Convert back to list of dictionaries
+        transformed_data = df.to_dict(orient="records")
+        
+        logging.info(f"Transformation complete. Produced {len(transformed_data)} transformed records")
+        return transformed_data
+    
+    def _engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create new features based on existing data.
         
         Args:
-            df (pd.DataFrame): The DataFrame to process.
-            group_by (str or list): Column(s) to group by.
-            agg_columns (list): Columns to aggregate.
-            agg_functions (dict, optional): Aggregation functions to apply.
-                Default: {'mean', 'sum', 'min', 'max'}
-        
-        Returns:
-            pd.DataFrame: DataFrame with added aggregation features.
-        """
-        if isinstance(group_by, str):
-            group_by = [group_by]
+            df: DataFrame with cleaned data.
             
-        agg_functions = agg_functions or ['mean', 'sum', 'min', 'max']
-        
-        logger.info(f"Adding aggregations grouping by {group_by}")
-        
-        # Create aggregations
-        agg_dict = {col: agg_functions for col in agg_columns}
-        aggregated = df.groupby(group_by).agg(agg_dict)
-        
-        # Flatten the column names
-        aggregated.columns = [f"{col}_{func}" for col, func in 
-                             zip(aggregated.columns.get_level_values(0),
-                                 aggregated.columns.get_level_values(1))]
-        
-        # Reset index to make it joinable
-        aggregated = aggregated.reset_index()
-        
-        # Merge aggregations back to the original dataframe
-        df = df.merge(aggregated, on=group_by, how='left')
-        
-        logger.info(f"Added {len(aggregated.columns) - len(group_by)} aggregation features")
-        return df
-    
-    def create_interactions(self, df, interaction_pairs):
-        """
-        Create interaction features between pairs of columns.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            interaction_pairs (list of tuples): Pairs of columns to create interactions for.
-        
         Returns:
-            pd.DataFrame: DataFrame with added interaction features.
+            DataFrame with new engineered features.
         """
-        logger.info(f"Creating {len(interaction_pairs)} interaction features")
+        # Example: Extract date components from timestamp fields
+        date_columns = df.select_dtypes(include=['datetime64']).columns
         
-        for col1, col2 in interaction_pairs:
-            if col1 not in df.columns or col2 not in df.columns:
-                logger.warning(f"Can't create interaction: column '{col1}' or '{col2}' not found")
+        for column in date_columns:
+            # Extract useful date components
+            df[f"{column}_year"] = df[column].dt.year
+            df[f"{column}_month"] = df[column].dt.month
+            df[f"{column}_day"] = df[column].dt.day
+            df[f"{column}_dayofweek"] = df[column].dt.dayofweek
+            
+            logging.debug(f"Extracted date components from '{column}'")
+        
+        # Example: Create categorical features from numeric ranges
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        
+        for column in numeric_columns:
+            # Skip ID columns and date components we just created
+            if column.endswith('_year') or column.endswith('_month') or column.endswith('_day') or column.endswith('_dayofweek'):
                 continue
                 
-            # Only create interactions for numeric columns
-            if not (pd.api.types.is_numeric_dtype(df[col1]) and 
-                    pd.api.types.is_numeric_dtype(df[col2])):
-                logger.warning(f"Can't create interaction: columns must be numeric")
+            if column.lower().endswith('id') or df[column].nunique() < 10:
                 continue
                 
-            # Create the interaction (multiplication)
-            df[f"{col1}_x_{col2}"] = df[col1] * df[col2]
-            
+            # Create binned categories
+            try:
+                df[f"{column}_category"] = pd.qcut(df[column], q=4, labels=['low', 'medium_low', 'medium_high', 'high'])
+                logging.debug(f"Created categorical bins for '{column}'")
+            except:
+                # Skip if binning fails (e.g., for columns with too few unique values)
+                logging.debug(f"Skipped creating bins for '{column}'")
+        
         return df
+    
+    def _normalize_and_scale(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize and scale numeric features.
+        
+        Args:
+            df: DataFrame with cleaned data.
+            
+        Returns:
+            DataFrame with normalized and scaled features.
+        """
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        
+        for column in numeric_columns:
+            # Skip ID columns, created categories, and date components
+            if (column.endswith('_category') or column.endswith('_year') or 
+                column.endswith('_month') or column.endswith('_day') or 
+                column.endswith('_dayofweek')):
+                continue
+                
+            if column.lower().endswith('id') or df[column].nunique() < 10:
+                continue
+            
+            # Min-max scaling to [0, 1] range
+            min_val = df[column].min()
+            max_val = df[column].max()
+            
+            # Avoid division by zero
+            if min_val != max_val:
+                df[f"{column}_scaled"] = (df[column] - min_val) / (max_val - min_val)
+                logging.debug(f"Created min-max scaled version of '{column}'")
+            
+            # Z-score normalization
+            mean_val = df[column].mean()
+            std_val = df[column].std()
+            
+            # Avoid division by zero
+            if std_val > 0:
+                df[f"{column}_normalized"] = (df[column] - mean_val) / std_val
+                logging.debug(f"Created z-score normalized version of '{column}'")
+return df
+    
+    def _aggregate_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Perform data aggregation operations.
+        
+        Args:
+            df: DataFrame with cleaned data.
+            
+        Returns:
+            DataFrame with aggregated data.
+        """
+        # Look for columns that might indicate a grouping key
+        potential_group_cols = [col for col in df.columns 
+                               if any(keyword in col.lower() 
+                                     for keyword in ['id', 'type', 'category', 'group'])]
+        
+        # If we found potential grouping columns
+        if potential_group_cols and len(df) > 1:
+            # Take the first suitable column for grouping
+            group_col = potential_group_cols[0]
+            
+            # Find numeric columns to aggregate
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            numeric_cols = [col for col in numeric_cols 
+                           if not col.endswith(('_normalized', '_scaled', '_category', '_year', '_month', '_day', '_dayofweek'))
+                           and not col.lower().endswith('id')]
+            
+            if numeric_cols:
+                # Create aggregation stats
+                logging.debug(f"Aggregating data by '{group_col}'")
+                
+                # Group and aggregate
+                grouped = df.groupby(group_col)[numeric_cols].agg(['mean', 'min', 'max', 'std'])
+                
+                # Flatten column hierarchy
+                grouped.columns = [f"{col}_{agg}" for col, agg in grouped.columns]
+                
+                # Reset index to convert back to regular dataframe
+                grouped = grouped.reset_index()
+                
+                # Merge aggregated data back with original
+                df = pd.merge(df, grouped, on=group_col, how='left')
+                
+                logging.debug(f"Added {len(grouped.columns) - 1} aggregated columns")
+        
+return df
+    
+    def _standardize_format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardize the output format for downstream processing.
+        
+        Args:
+            df: DataFrame with transformed data.
+            
+        Returns:
+            DataFrame with standardized format.
+        """
+        # Create a standard metadata column to store additional attributes
+        if 'metadata' not in df.columns:
+            df['metadata'] = None
+        
+        # Select columns to include in metadata
+        # Include derived columns and keep core columns separate
+        derived_cols = [col for col in df.columns 
+                       if any(suffix in col 
+                             for suffix in ['_normalized', '_scaled', '_category', 
+                                           '_year', '_month', '_day', '_dayofweek',
+                                           '_mean', '_min', '_max', '_std'])]
+        
+        # Create a standard structure
+        result_df = pd.DataFrame()
+        
+        # Identify or create key columns
+        if 'id' in df.columns:
+            result_df['source_id'] = df['id']
+        elif 'source_id' in df.columns:
+            result_df['source_id'] = df['source_id']
+        else:
+            # Create a sequential ID if none exists
+            result_df['source_id'] = [f"record_{i}" for i in range(len(df))]
+        
+        # Identify or create data type
+        if 'type' in df.columns:
+            result_df['data_type'] = df['type']
+        elif 'data_type' in df.columns:
+            result_df['data_type'] = df['data_type']
+        else:
+            result_df['data_type'] = 'standard'
+        
+        # Find a value column or use first numeric column
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        non_derived_numeric = [col for col in numeric_cols 
+                              if col not in derived_cols 
+                              and not col.lower().endswith('id')]
+        
+        if 'value' in df.columns:
+            result_df['value'] = df['value']
+        elif len(non_derived_numeric) > 0:
+            result_df['value'] = df[non_derived_numeric[0]]
+        else:
+            result_df['value'] = 0
+        
+        # Find or create timestamp
+        date_cols = df.select_dtypes(include=['datetime64']).columns
+        if 'timestamp' in df.columns:
+            result_df['timestamp'] = df['timestamp']
+        elif len(date_cols) > 0:
+            result_df['timestamp'] = df[date_cols[0]]
+        else:
+            result_df['timestamp'] = datetime.now()
+        
+        # Store all other columns in metadata
+        result_df['metadata'] = df.apply(
+            lambda row: {
+                col: row[col] if not pd.isna(row[col]) 
+                else None
+                for col in df.columns 
+                if col not in result_df.columns
+            },
+            axis=1
+        )
+        
+        # Convert any non-serializable types in metadata
+        def fix_non_serializable(obj):
+            if isinstance(obj, (np.int64, np.int32, np.int16, np.int8)):
+                return int(obj)
+            elif isinstance(obj, (np.float64, np.float32, np.float16)):
+                return float(obj)
+            elif isinstance(obj, (datetime, np.datetime64)):
+                return obj.isoformat() if hasattr(obj, 'isoformat') else str(obj)
+            elif isinstance(obj, (pd.Timestamp)):
+                return obj.isoformat()
+            elif isinstance(obj, (np.bool_)):
+                return bool(obj)
+            elif isinstance(obj, (np.ndarray)):
+                return obj.tolist()
+            else:
+                return obj
+        
+        # Fix non-serializable types in metadata
+        for i, metadata in enumerate(result_df['metadata']):
+            if metadata:
+                result_df.at[i, 'metadata'] = {
+                    k: fix_non_serializable(v) for k, v in metadata.items()
+                }
+        
+        logging.debug(f"Standardized data format: {list(result_df.columns)}")
+        return result_df

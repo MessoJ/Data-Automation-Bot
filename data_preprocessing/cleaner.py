@@ -15,7 +15,7 @@ import numpy as np
 from datetime import datetime
 import re
 
-from data_automation_bot.utils.helpers import handle_exceptions
+from utils.helpers import handle_exceptions
 
 class DataCleaner:
     """Class for cleaning raw data."""

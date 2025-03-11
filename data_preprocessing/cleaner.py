@@ -1,245 +1,207 @@
+"""
+Data Cleaner for handling data cleaning operations.
+
+This module provides functionality to clean raw data by:
+- Removing duplicates
+- Handling missing values
+- Filtering outliers
+- Normalizing data formats
+"""
+
+import logging
+from typing import Dict, List, Any, Union, Optional
 import pandas as pd
 import numpy as np
-import logging
+from datetime import datetime
+import re
 
-logger = logging.getLogger(__name__)
+from data_automation_bot.utils.helpers import handle_exceptions
 
 class DataCleaner:
-    """
-    Class for cleaning raw data from various sources.
-    Handles common preprocessing tasks like handling missing values,
-    removing duplicates, fixing data types, etc.
-    """
+    """Class for cleaning raw data."""
     
-    def __init__(self, config=None):
+    def __init__(self):
+        """Initialize the data cleaner."""
+        logging.debug("Initializing DataCleaner")
+    
+    @handle_exceptions
+    def clean(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Initialize the DataCleaner with optional configuration.
+        Clean raw data records.
         
         Args:
-            config (dict, optional): Configuration options for cleaning.
-        """
-        self.config = config or {}
-        logger.info("DataCleaner initialized")
-    
-    def clean_dataframe(self, df, strategies=None):
-        """
-        Clean a pandas DataFrame using specified strategies.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to clean.
-            strategies (dict, optional): Cleaning strategies to apply.
-                Example: {'missing_values': 'drop', 'duplicates': 'remove'}
-        
+            raw_data: List of raw data records to clean.
+            
         Returns:
-            pd.DataFrame: The cleaned DataFrame.
+            List of cleaned data records.
         """
-        if df.empty:
-            logger.warning("Empty DataFrame provided for cleaning")
-            return df
+        if not raw_data:
+            logging.warning("No data to clean")
+            return []
+            
+        logging.info(f"Cleaning {len(raw_data)} raw data records")
         
-        strategies = strategies or {
-            'missing_values': 'impute_mean',
-            'duplicates': 'remove',
-            'outliers': 'clip',
-            'data_types': 'auto_convert'
-        }
+        # Convert to pandas DataFrame for easier manipulation
+        df = pd.DataFrame(raw_data)
         
-        logger.info(f"Cleaning DataFrame with shape {df.shape}")
+        # Track original record count
+        original_count = len(df)
         
-        # Make a copy to avoid modifying the original
-        cleaned_df = df.copy()
+        # Apply cleaning operations
+        df = self._remove_duplicates(df)
+        df = self._handle_missing_values(df)
+        df = self._filter_outliers(df)
+        df = self._normalize_formats(df)
         
-        # Handle missing values
-        if strategies.get('missing_values') == 'drop':
-            cleaned_df = self._drop_missing_values(cleaned_df)
-        elif strategies.get('missing_values') == 'impute_mean':
-            cleaned_df = self._impute_missing_values(cleaned_df, method='mean')
-        elif strategies.get('missing_values') == 'impute_median':
-            cleaned_df = self._impute_missing_values(cleaned_df, method='median')
+        # Convert back to list of dictionaries
+        cleaned_data = df.to_dict(orient="records")
         
-        # Handle duplicates
-        if strategies.get('duplicates') == 'remove':
-            cleaned_df = self._remove_duplicates(cleaned_df)
-        
-        # Handle outliers
-        if strategies.get('outliers') == 'clip':
-            cleaned_df = self._clip_outliers(cleaned_df)
-        elif strategies.get('outliers') == 'remove':
-            cleaned_df = self._remove_outliers(cleaned_df)
-        
-        # Convert data types
-        if strategies.get('data_types') == 'auto_convert':
-            cleaned_df = self._convert_data_types(cleaned_df)
-        
-        logger.info(f"Cleaning complete. Resulting shape: {cleaned_df.shape}")
-        return cleaned_df
+        logging.info(f"Cleaning complete. Reduced from {original_count} to {len(cleaned_data)} records")
+        return cleaned_data
     
-    def _drop_missing_values(self, df, threshold=0.5):
+    def _remove_duplicates(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Drop rows or columns with too many missing values.
+        Remove duplicate records from the dataset.
         
         Args:
-            df (pd.DataFrame): The DataFrame to process.
-            threshold (float): The threshold for dropping (default 0.5).
-                Rows/columns with more than this fraction of missing values will be dropped.
-        
+            df: DataFrame with raw data.
+            
         Returns:
-            pd.DataFrame: DataFrame with missing values dropped.
+            DataFrame with duplicates removed.
         """
-        # Drop columns with too many missing values
-        cols_to_drop = df.columns[df.isnull().mean() > threshold]
-        if len(cols_to_drop) > 0:
-            logger.info(f"Dropping {len(cols_to_drop)} columns with >50% missing values")
-            df = df.drop(columns=cols_to_drop)
+        before_count = len(df)
         
-        # Drop rows with too many missing values
-        rows_before = len(df)
-        df = df.dropna(thresh=int(df.shape[1] * (1 - threshold)))
-        rows_dropped = rows_before - len(df)
-        if rows_dropped > 0:
-            logger.info(f"Dropped {rows_dropped} rows with >50% missing values")
+        # Check if there's a unique identifier column
+        if "id" in df.columns:
+            df = df.drop_duplicates(subset=["id"])
+        else:
+            # If no ID, use all columns to identify duplicates
+            df = df.drop_duplicates()
+        
+        after_count = len(df)
+        if before_count > after_count:
+            logging.info(f"Removed {before_count - after_count} duplicate records")
+            
+        return df
+    
+    def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Handle missing values in the dataset.
+        
+        Args:
+            df: DataFrame with raw data.
+            
+        Returns:
+            DataFrame with missing values handled.
+        """
+        # Check for null values
+        null_counts = df.isnull().sum()
+        if null_counts.sum() > 0:
+            logging.info(f"Found {null_counts.sum()} missing values across {sum(null_counts > 0)} columns")
+            
+            # Handle missing values differently based on column type
+            for column in df.columns:
+                # Skip columns with no missing values
+                if null_counts[column] == 0:
+                    continue
+                
+                # For numeric columns, fill with median
+                if np.issubdtype(df[column].dtype, np.number):
+                    median_value = df[column].median()
+                    df[column] = df[column].fillna(median_value)
+                    logging.debug(f"Filled {null_counts[column]} missing values in '{column}' with median {median_value}")
+                
+                # For categorical/string columns, fill with mode or 'unknown'
+                elif df[column].dtype == 'object':
+                    # If more than 50% is missing, just use 'unknown'
+                    if null_counts[column] / len(df) > 0.5:
+                        df[column] = df[column].fillna("unknown")
+                    else:
+                        # Use most common value
+                        mode_value = df[column].mode()[0]
+                        df[column] = df[column].fillna(mode_value)
+                    logging.debug(f"Filled {null_counts[column]} missing values in '{column}'")
+                
+                # For datetime columns, use previous value or current time
+                elif pd.api.types.is_datetime64_any_dtype(df[column]):
+                    df[column] = df[column].fillna(method='ffill')
+                    # If still have NAs at the beginning, use current time
+                    df[column] = df[column].fillna(datetime.now())
+                    logging.debug(f"Filled {null_counts[column]} missing datetime values in '{column}'")
         
         return df
     
-    def _impute_missing_values(self, df, method='mean'):
+    def _filter_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Impute missing values in the DataFrame.
+        Filter outliers from numeric columns using IQR method.
         
         Args:
-            df (pd.DataFrame): The DataFrame to process.
-            method (str): Method for imputation ('mean', 'median', 'mode').
-        
-        Returns:
-            pd.DataFrame: DataFrame with imputed values.
-        """
-        # For each column, impute values based on data type and method
-        for col in df.columns:
-            missing_count = df[col].isnull().sum()
+            df: DataFrame with raw data.
             
-            if missing_count == 0:
+        Returns:
+            DataFrame with outliers handled.
+        """
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        
+        for column in numeric_columns:
+            # Skip columns that are IDs or categorical
+            if column.lower().endswith('id') or df[column].nunique() < 10:
                 continue
                 
-            logger.info(f"Imputing {missing_count} missing values in column '{col}'")
+            # Calculate IQR
+            Q1 = df[column].quantile(0.25)
+            Q3 = df[column].quantile(0.75)
+            IQR = Q3 - Q1
             
-            # Skip non-numeric columns unless using mode
-            if not pd.api.types.is_numeric_dtype(df[col]) and method != 'mode':
-                logger.info(f"Skipping non-numeric column '{col}' for {method} imputation")
+            # Define bounds
+            lower_bound = Q1 - 3 * IQR
+            upper_bound = Q3 + 3 * IQR
+            
+            # Identify outliers
+            outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
+            
+            if not outliers.empty:
+                logging.info(f"Found {len(outliers)} outliers in column '{column}'")
+                
+                # Clip values to the bounds instead of removing rows
+                df[column] = df[column].clip(lower=lower_bound, upper=upper_bound)
+                logging.debug(f"Clipped outliers in '{column}' to range [{lower_bound:.2f}, {upper_bound:.2f}]")
+        
+        return df
+    
+    def _normalize_formats(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize data formats for consistency.
+        
+        Args:
+            df: DataFrame with raw data.
+            
+        Returns:
+            DataFrame with normalized formats.
+        """
+        # Normalize string columns by removing extra whitespace and standardizing case
+        string_columns = df.select_dtypes(include=['object']).columns
+        
+        for column in string_columns:
+            # Skip columns that appear to contain JSON or complex data
+            if df[column].str.contains('{').any() or df[column].str.contains('[').any():
                 continue
+                
+            # Strip whitespace and standardize case
+            df[column] = df[column].str.strip()
             
-            if method == 'mean':
-                df[col] = df[col].fillna(df[col].mean())
-            elif method == 'median':
-                df[col] = df[col].fillna(df[col].median())
-            elif method == 'mode':
-                df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else np.nan)
+            # If the column name suggests it's a category or type, standardize case
+            if any(keyword in column.lower() for keyword in ['type', 'category', 'status', 'level']):
+                df[column] = df[column].str.lower()
         
-        return df
-    
-    def _remove_duplicates(self, df):
-        """
-        Remove duplicate rows from the DataFrame.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-        
-        Returns:
-            pd.DataFrame: DataFrame with duplicates removed.
-        """
-        rows_before = len(df)
-        df = df.drop_duplicates()
-        rows_dropped = rows_before - len(df)
-        
-        if rows_dropped > 0:
-            logger.info(f"Removed {rows_dropped} duplicate rows")
-        
-        return df
-    
-    def _clip_outliers(self, df, std_dev=3):
-        """
-        Clip outliers in numeric columns to be within a certain number of 
-        standard deviations from the mean.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            std_dev (int): Number of standard deviations to use as threshold.
-        
-        Returns:
-            pd.DataFrame: DataFrame with outliers clipped.
-        """
-        for col in df.select_dtypes(include=['number']).columns:
-            mean = df[col].mean()
-            std = df[col].std()
-            
-            lower_bound = mean - std_dev * std
-            upper_bound = mean + std_dev * std
-            
-            outliers = ((df[col] < lower_bound) | (df[col] > upper_bound)).sum()
-            if outliers > 0:
-                logger.info(f"Clipping {outliers} outliers in column '{col}'")
-                df[col] = df[col].clip(lower=lower_bound, upper=upper_bound)
-        
-        return df
-    
-    def _remove_outliers(self, df, std_dev=3):
-        """
-        Remove rows with outlier values.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-            std_dev (int): Number of standard deviations to use as threshold.
-        
-        Returns:
-            pd.DataFrame: DataFrame with outlier rows removed.
-        """
-        mask = pd.Series(True, index=df.index)
-        
-        for col in df.select_dtypes(include=['number']).columns:
-            mean = df[col].mean()
-            std = df[col].std()
-            
-            lower_bound = mean - std_dev * std
-            upper_bound = mean + std_dev * std
-            
-            col_mask = (df[col] >= lower_bound) & (df[col] <= upper_bound)
-            outliers = (~col_mask).sum()
-            
-            if outliers > 0:
-                logger.info(f"Found {outliers} outliers in column '{col}'")
-                mask = mask & col_mask
-        
-        rows_before = len(df)
-        df = df[mask]
-        rows_removed = rows_before - len(df)
-        
-        if rows_removed > 0:
-            logger.info(f"Removed {rows_removed} rows with outlier values")
-        
-        return df
-    
-    def _convert_data_types(self, df):
-        """
-        Automatically convert data types to more appropriate ones.
-        
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
-        
-        Returns:
-            pd.DataFrame: DataFrame with converted data types.
-        """
-        # Try to convert object columns to numeric where possible
-        for col in df.select_dtypes(include=['object']).columns:
-            # Try to convert to numeric
-            try:
-                numeric_col = pd.to_numeric(df[col])
-                df[col] = numeric_col
-                logger.info(f"Converted column '{col}' to numeric type")
-            except:
-                # Try to convert to datetime
-                try:
-                    date_col = pd.to_datetime(df[col])
-                    df[col] = date_col
-                    logger.info(f"Converted column '{col}' to datetime type")
-                except:
-                    pass  # Keep as object if conversion fails
+        # Convert date strings to datetime objects
+        for column in df.columns:
+            if any(keyword in column.lower() for keyword in ['date', 'time', 'created', 'updated']):
+                if df[column].dtype == 'object':
+                    try:
+                        df[column] = pd.to_datetime(df[column], errors='coerce')
+                        logging.debug(f"Converted '{column}' to datetime format")
+                    except:
+                        logging.debug(f"Failed to convert '{column}' to datetime")
         
         return df

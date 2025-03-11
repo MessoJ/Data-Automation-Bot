@@ -5,8 +5,8 @@ import unittest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch
-from data_automation_bot.data_preprocessing.cleaner import DataCleaner
-from data_automation_bot.data_preprocessing.transformer import DataTransformer
+from data_preprocessing.cleaner import DataCleaner
+from data_preprocessing.transformer import DataTransformer
 
 class TestDataCleaner(unittest.TestCase):
     """Test cases for the DataCleaner class."""

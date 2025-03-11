@@ -10,8 +10,8 @@ import requests
 import time
 from typing import Dict, List, Optional, Any
 
-import data_automation_bot.config as config
-from data_automation_bot.utils.helpers import handle_exceptions
+import config as config
+from utils.helpers import handle_exceptions
 
 class APIClient:
     """Client for interacting with the data source API."""

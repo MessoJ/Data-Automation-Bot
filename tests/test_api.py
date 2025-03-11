@@ -5,8 +5,8 @@ import unittest
 import requests
 import json
 from unittest.mock import patch, MagicMock
-from data_automation_bot.api.api_client import APIClient
-from data_automation_bot.config import Config
+from api.api_client import APIClient
+from config import Config
 
 class TestAPIClient(unittest.TestCase):
     """Test cases for the APIClient class."""

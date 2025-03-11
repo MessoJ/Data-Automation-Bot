@@ -212,6 +212,28 @@ def detect_file_type(file_path):
     else:
         return 'unknown'
 
+def handle_exceptions(func):
+    """
+    Decorator to handle exceptions for a function.
+    
+    Args:
+        func: The function to wrap with exception handling.
+        
+    Returns:
+        Wrapped function with exception handling.
+    """
+    import functools
+    import logging
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Exception in {func.__name__}: {e}", exc_info=True)
+            raise
+    return wrapper
+    
 def read_data_file(file_path):
     """
     Read data from various file types into a pandas DataFrame.

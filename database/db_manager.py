@@ -29,7 +29,7 @@ class ProcessedData(Base):
     data_type = sa.Column(sa.String(50), nullable=False)
     value = sa.Column(sa.Float)
     timestamp = sa.Column(sa.DateTime, default=datetime.now)
-    metadata = sa.Column(sa.JSON)
+    data_metadata = sa.Column(sa.JSON)  # Renamed attribute
     processed_at = sa.Column(sa.DateTime, default=datetime.now)
     
     def __repr__(self):

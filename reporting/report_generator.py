@@ -19,9 +19,9 @@ from datetime import datetime, timedelta
 import json
 import csv
 
-import data_automation_bot.config as config
-from data_automation_bot.database.db_manager import DatabaseManager
-from data_automation_bot.utils.helpers import handle_exceptions, ensure_directory_exists
+import config as config
+from database.db_manager import DatabaseManager
+from utils.helpers import handle_exceptions, ensure_directory_exists
 
 class ReportGenerator:
     """Class for generating data reports and visualizations."""

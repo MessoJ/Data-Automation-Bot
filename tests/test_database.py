@@ -6,7 +6,7 @@ import os
 import sqlite3
 from unittest.mock import patch, MagicMock
 import pandas as pd
-from data_automation_bot.database.db_manager import DatabaseManager
+from database.db_manager import DatabaseManager
 
 class TestDatabaseManager(unittest.TestCase):
     """Test cases for the DatabaseManager class."""

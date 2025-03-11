@@ -22,7 +22,7 @@ API_TIMEOUT = int(os.getenv("API_TIMEOUT", "30"))
 # Database Settings
 DB_HOST = os.getenv("DB_HOST", "database-1.cxwa0k264rkw.eu-north-1.rds.amazonaws.com")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
-DB_NAME = os.getenv("DB_NAME", "database-1")
+DB_NAME = os.getenv("DB_NAME", "pybot")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("Minaa.2030", "")
 DB_CONN_STRING = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

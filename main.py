@@ -12,14 +12,14 @@ import sys
 import time
 from datetime import datetime
 
-from data_automation_bot.api.api_client import APIClient
-from data_automation_bot.database.db_manager import DatabaseManager
-from data_automation_bot.data_preprocessing.cleaner import DataCleaner
-from data_automation_bot.data_preprocessing.transformer import DataTransformer
-from data_automation_bot.reporting.report_generator import ReportGenerator
-from data_automation_bot.scheduler.job_scheduler import JobScheduler
-from data_automation_bot.utils.helpers import setup_logging
-import data_automation_bot.config as config
+from api.api_client import APIClient
+from database.db_manager import DatabaseManager
+from data_preprocessing.cleaner import DataCleaner
+from data_preprocessing.transformer import DataTransformer
+from reporting.report_generator import ReportGenerator
+from scheduler.job_scheduler import JobScheduler
+from utils.helpers import setup_logging
+import config
 
 def process_data_job():
     """Main data processing workflow"""

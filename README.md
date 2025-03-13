@@ -40,7 +40,7 @@ A Python-based bot that automates data preprocessing and reporting, integrating 
 ### Running the automation
 
 ```bash
-python scripts/run_automation.py
+python main.py
 ```
 
 ### Scheduling automated runs
@@ -48,7 +48,7 @@ python scripts/run_automation.py
 The bot can be scheduled to run daily, weekly, or monthly:
 
 ```bash
-python scripts/run_automation.py --schedule daily
+python main.py --schedule daily
 ```
 
 ## Development

@@ -1,6 +1,6 @@
 # Data Automation Bot
 
-A Python-based bot that automates data preprocessing and reporting, integrating with APIs and SQL databases. This solution has reduced manual effort by 40%.
+A Python-based bot that automates data preprocessing and reporting, integrating with APIs and SQL databases. This solution has reduces manual effort.
 
 ## Features
 

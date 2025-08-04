@@ -20,12 +20,17 @@ API_KEY = os.getenv("API_KEY", "")
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", "30"))
 
 # Database Settings
-DB_HOST = os.getenv("DB_HOST", "database-1.cxwa0k264rkw.eu-north-1.rds.amazonaws.com")
+DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
-DB_NAME = os.getenv("DB_NAME", "pybot")
+DB_NAME = os.getenv("DB_NAME", "data_automation")
 DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("Minaa.2030", "")
-DB_CONN_STRING = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+
+# Use SQLite for local development if PostgreSQL is not available
+if not DB_PASSWORD or DB_HOST == "localhost":
+    DB_CONN_STRING = "sqlite:///./data_automation.db"
+else:
+    DB_CONN_STRING = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Data Processing Settings
 DATA_BATCH_SIZE = int(os.getenv("DATA_BATCH_SIZE", "1000"))

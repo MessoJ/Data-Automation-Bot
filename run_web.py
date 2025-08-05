@@ -10,6 +10,9 @@ import sys
 import logging
 from pathlib import Path
 
+log_dir = os.path.dirname(config.LOG_FILE)
+if log_dir and not os.path.exists(log_dir):
+    os.makedirs(log_dir)
 # Add the project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))

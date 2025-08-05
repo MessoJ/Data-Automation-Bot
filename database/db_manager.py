@@ -69,6 +69,17 @@ class DatabaseManager:
         
     def _initialize_engine(self):
         """Initialize the SQLAlchemy engine and session factory."""
+        logging.info(f"Initializing database with connection string: {self.conn_string}")
+        
+        # Ensure SQLite connection string format
+        if self.conn_string.startswith('sqlite'):
+            # Add check_same_thread=False for SQLite to work with Flask
+            if '?' not in self.conn_string:
+                self.conn_string += '?check_same_thread=False'
+            logging.info(f"Using SQLite connection: {self.conn_string}")
+        else:
+            logging.info(f"Using database connection: {self.conn_string}")
+            
         self.engine = sa.create_engine(self.conn_string)
         self.Session = sessionmaker(bind=self.engine)
         

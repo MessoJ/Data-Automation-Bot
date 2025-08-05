@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Data Automation - Sync Inventory Across All Platforms</title>
+    <meta name="description" content="Automate inventory sync across Shopify, Amazon, eBay and more. Save 20+ hours/week and increase revenue by 15-25%.">
+    <link rel="stylesheet" href="web/static/css/main.css">
+    <style>
+        /* Landing Page Specific Styles */
+        .hero-section {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            padding: var(--spacing-2xl) 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: var(--spacing-lg);
+            justify-content: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .demo-video {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            margin: var(--spacing-2xl) 0;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            background: var(--bg-tertiary);
+        }
+
+        .video-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+        }
+
+        .features-section {
+            padding: var(--spacing-2xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all var(--transition-normal);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .feature-icon {
+            width: var(--icon-xl);
+            height: var(--icon-xl);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-lg);
+            color: white;
+            font-size: var(--icon-lg);
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .pricing-section {
+            padding: var(--spacing-2xl) 0;
+            background: var(--bg-primary);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all var(--transition-normal);
+            position: relative;
+        }
+
+        .pricing-card.featured {
+            border-color: var(--primary-blue);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .pricing-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .pricing-period {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin: var(--spacing-lg) 0;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            padding: var(--spacing-sm) 0;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: var(--success-green);
+            font-weight: bold;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
+            color: white;
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: all var(--transition-fast);
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .cta-button.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .testimonials-section {
+            padding: var(--spacing-2xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .testimonial-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            font-size: 1.125rem;
+        }
+
+        .testimonial-author {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .testimonial-company {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .footer {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: var(--spacing-xl) 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-cta {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                Data Automation Bot
+            </a>
+            <div class="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#testimonials" class="nav-link">Testimonials</a>
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="#contact" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">🛒 E-commerce Data Automation</h1>
+            <p class="hero-subtitle">
+                Sync inventory, pricing, and orders across all your sales channels in real-time. 
+                Save 20+ hours/week and increase revenue by 15-25%.
+            </p>
+            <div class="hero-cta">
+                <a href="#contact" class="cta-button">Start Free Trial</a>
+                <a href="#demo" class="cta-button secondary">Watch Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Video Section -->
+    <section id="demo" class="demo-video">
+        <div class="hero-content">
+            <h2 style="text-align: center; margin-bottom: var(--spacing-xl); color: var(--text-primary);">
+                See It In Action
+            </h2>
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <div style="text-align: center;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: var(--spacing-md);">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <div>Demo Video Coming Soon</div>
+                        <div style="font-size: 0.875rem; margin-top: var(--spacing-sm);">
+                            Watch how easy it is to sync inventory across platforms
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="hero-content">
+            <h2 style="text-align: center; margin-bottom: var(--spacing-2xl); color: var(--text-primary);">
+                Why Choose Our Platform?
+            </h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Real-Time Sync</h3>
+                    <p class="feature-desc">
+                        Automatically sync inventory and pricing across Shopify, Amazon, eBay, and more every 15 minutes.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, var(--success-green), #059669);">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Smart Alerts</h3>
+                    <p class="feature-desc">
+                        Get instant notifications when inventory is low or prices are inconsistent across platforms.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, var(--info-purple), #7c3aed);">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 3v18h18"/>
+                            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Analytics Dashboard</h3>
+                    <p class="feature-desc">
+                        Track performance across all platforms with detailed analytics and revenue insights.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, var(--warning-orange), #d97706);">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Easy Setup</h3>
+                    <p class="feature-desc">
+                        Connect your platforms in minutes with our simple API integration process.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+        <div class="hero-content">
+            <h2 style="text-align: center; margin-bottom: var(--spacing-2xl); color: var(--text-primary);">
+                Simple, Transparent Pricing
+            </h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Starter</h3>
+                    <div class="pricing-price">$99</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Up to 3 platforms</li>
+                        <li>Daily sync (24 hours)</li>
+                        <li>Basic discrepancy alerts</li>
+                        <li>Email support</li>
+                        <li>Standard reports</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('starter')">Start Free Trial</button>
+                </div>
+
+                <div class="pricing-card featured">
+                    <h3 class="pricing-title">Professional</h3>
+                    <div class="pricing-price">$199</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Up to 10 platforms</li>
+                        <li>Real-time sync (15 min)</li>
+                        <li>Advanced analytics</li>
+                        <li>Priority support</li>
+                        <li>Custom integrations</li>
+                        <li>Advanced reports</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('professional')">Start Free Trial</button>
+                </div>
+
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Enterprise</h3>
+                    <div class="pricing-price">$399</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Unlimited platforms</li>
+                        <li>Custom sync intervals</li>
+                        <li>White-label dashboard</li>
+                        <li>Dedicated support</li>
+                        <li>API access</li>
+                        <li>Custom development</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('enterprise')">Start Free Trial</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials-section">
+        <div class="hero-content">
+            <h2 style="text-align: center; margin-bottom: var(--spacing-2xl); color: var(--text-primary);">
+                What Our Customers Say
+            </h2>
+            <div class="testimonial-card">
+                <p class="testimonial-text">
+                    "I was spending 3 hours every day updating inventory across Shopify, Amazon, and eBay. 
+                    Now it's automated and I can focus on growing my business. Revenue increased by 22% in the first month!"
+                </p>
+                <div class="testimonial-author">Sarah Johnson</div>
+                <div class="testimonial-company">CEO, Fashion Forward Boutique</div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-text">
+                    "We manage 50+ client stores. This tool saves us 40 hours/week and prevents costly inventory errors. 
+                    Our clients love the real-time sync capabilities."
+                </p>
+                <div class="testimonial-author">Mike Chen</div>
+                <div class="testimonial-company">Founder, E-commerce Solutions Agency</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="pricing-section">
+        <div class="hero-content">
+            <h2 style="text-align: center; margin-bottom: var(--spacing-xl); color: var(--text-primary);">
+                Ready to Get Started?
+            </h2>
+            <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--spacing-xl);">
+                Start your 14-day free trial. No credit card required.
+            </p>
+            <div style="text-align: center;">
+                <button class="cta-button" onclick="startTrial('professional')">Start Free Trial</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 Data Automation Bot. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Stripe Payment Integration
+        function startTrial(plan) {
+            // In production, this would integrate with Stripe
+            showToast(`Starting ${plan} trial...`, 'info');
+            
+            // Simulate payment processing
+            setTimeout(() => {
+                showToast('Trial started successfully! Redirecting to dashboard...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            }, 1500);
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.parentElement.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

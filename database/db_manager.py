@@ -115,7 +115,7 @@ class DatabaseManager:
                 data_type=record.get("data_type", "unknown"),
                 value=record.get("value"),
                 timestamp=record.get("timestamp", datetime.now()),
-                metadata=record.get("metadata", {})
+                data_metadata=record.get("metadata", {})
             )
             db_objects.append(db_obj)
         
@@ -173,7 +173,7 @@ class DatabaseManager:
                     "data_type": result.data_type,
                     "value": result.value,
                     "timestamp": result.timestamp,
-                    "metadata": result.metadata,
+                    "metadata": result.data_metadata,
                     "processed_at": result.processed_at
                 })
             

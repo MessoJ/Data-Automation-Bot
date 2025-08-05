@@ -83,11 +83,10 @@ def main():
         
         # Register jobs
         scheduler.add_job(
+            "data_processing",
             process_data_job, 
-            "data_processing", 
-            interval=config.SCHEDULER_INTERVAL,
-            retry_attempts=config.RETRY_ATTEMPTS,
-            retry_delay=config.RETRY_DELAY
+            trigger='interval',
+            seconds=config.SCHEDULER_INTERVAL
         )
         
         # Start scheduler
@@ -100,7 +99,7 @@ def main():
                 time.sleep(1)
         except KeyboardInterrupt:
             logging.info("Received shutdown signal")
-            scheduler.stop()
+            scheduler.shutdown()
             logging.info("Scheduler stopped")
             
     except Exception as e:

@@ -38,6 +38,12 @@ class JobScheduler:
             self._running = True
             logger.info("Job scheduler started")
     
+    def stop(self):
+        """
+        Shutdown the scheduler.
+        """
+        self.shutdown()
+    
     def shutdown(self, wait: bool = True):
         """
         Shutdown the scheduler.

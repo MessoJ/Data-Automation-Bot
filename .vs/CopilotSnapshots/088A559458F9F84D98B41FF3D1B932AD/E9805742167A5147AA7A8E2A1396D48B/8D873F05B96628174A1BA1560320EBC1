@@ -1,0 +1,215 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Configuration - Data Automation Bot{% endblock %}
+
+{% block content %}
+<div class="config-page">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">Configuration</h1>
+        <p class="page-subtitle">View and manage system configuration settings</p>
+    </div>
+
+    <!-- Configuration Sections -->
+    <div class="config-sections">
+        <!-- API Configuration -->
+        <div class="config-section">
+            <div class="section-header">
+                <h3 class="section-title">API Configuration</h3>
+                <div class="section-status" id="apiConfigStatus">
+                    <span class="status-badge status-badge-checking">Checking...</span>
+                </div>
+            </div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label class="config-label">Base URL</label>
+                    <div class="config-value" id="apiBaseUrl">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Timeout</label>
+                    <div class="config-value" id="apiTimeout">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">API Key Status</label>
+                    <div class="config-value" id="apiKeyStatus">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Configuration -->
+        <div class="config-section">
+            <div class="section-header">
+                <h3 class="section-title">Database Configuration</h3>
+                <div class="section-status" id="dbConfigStatus">
+                    <span class="status-badge status-badge-checking">Checking...</span>
+                </div>
+            </div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label class="config-label">Host</label>
+                    <div class="config-value" id="dbHost">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Port</label>
+                    <div class="config-value" id="dbPort">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Database Name</label>
+                    <div class="config-value" id="dbName">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Username</label>
+                    <div class="config-value" id="dbUser">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduler Configuration -->
+        <div class="config-section">
+            <div class="section-header">
+                <h3 class="section-title">Scheduler Configuration</h3>
+                <div class="section-status" id="schedulerConfigStatus">
+                    <span class="status-badge status-badge-success">Active</span>
+                </div>
+            </div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label class="config-label">Interval (seconds)</label>
+                    <div class="config-value" id="schedulerInterval">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Retry Attempts</label>
+                    <div class="config-value" id="retryAttempts">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Retry Delay (seconds)</label>
+                    <div class="config-value" id="retryDelay">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reporting Configuration -->
+        <div class="config-section">
+            <div class="section-header">
+                <h3 class="section-title">Reporting Configuration</h3>
+                <div class="section-status" id="reportingConfigStatus">
+                    <span class="status-badge status-badge-success">Active</span>
+                </div>
+            </div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label class="config-label">Output Directory</label>
+                    <div class="config-value" id="reportOutputDir">Loading...</div>
+                </div>
+                <div class="config-item">
+                    <label class="config-label">Default Format</label>
+                    <div class="config-value" id="defaultFormat">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="system-info">
+        <h3 class="section-title">System Information</h3>
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon info-icon-blue">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586l-5.293 5.293a1 1 0 01-1.414 0L9 6.586 3.707 11.879A1 1 0 013 11V4z"/>
+                    </svg>
+                </div>
+                <div class="info-content">
+                    <h4 class="info-title">Version</h4>
+                    <p class="info-value">1.0.0</p>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon info-icon-green">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="info-content">
+                    <h4 class="info-title">Uptime</h4>
+                    <p class="info-value" id="systemUptime">Calculating...</p>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon info-icon-purple">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <div class="info-content">
+                    <h4 class="info-title">Environment</h4>
+                    <p class="info-value">Production</p>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon info-icon-orange">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="info-content">
+                    <h4 class="info-title">Last Updated</h4>
+                    <p class="info-value" id="lastUpdated">Just now</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Actions -->
+    <div class="config-actions">
+        <h3 class="section-title">Actions</h3>
+        <div class="actions-grid">
+            <button class="action-button action-button-primary" onclick="refreshConfig()">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span class="action-text">Refresh Configuration</span>
+            </button>
+
+            <button class="action-button action-button-secondary" onclick="exportConfig()">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z"/>
+                </svg>
+                <span class="action-text">Export Configuration</span>
+            </button>
+
+            <button class="action-button action-button-warning" onclick="testConnections()">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="action-text">Test Connections</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Test Modal -->
+<div class="modal" id="testModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Connection Test Results</h3>
+            <button class="modal-close" onclick="closeTestModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="test-results" id="testResults">
+                <!-- Test results will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeTestModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/config.js') }}"></script>
+{% endblock %}

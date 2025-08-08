@@ -1,0 +1,20 @@
+﻿# Database credentials
+DB_HOST=database-1.cxwa0k264rkw.eu-north-1.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=pybot
+DB_USER=postgres
+DB_PASSWORD=Minaa.2030
+
+# API credentials
+API_KEY=your_api_key_here
+API_SECRET=your_api_secret_here
+API_BASE_URL=https://api.example.com/v1
+
+# Reporting settings
+REPORT_OUTPUT_DIR=./reports
+EMAIL_SENDER=reports@yourcompany.com
+EMAIL_RECIPIENTS=client@theircompany.com
+SMTP_SERVER=smtp.yourcompany.com
+SMTP_PORT=587
+SMTP_USER=your_smtp_user
+SMTP_PASSWORD=your_smtp_password

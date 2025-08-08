@@ -1,0 +1,675 @@
+﻿{% extends "base.html" %}
+
+{% block title %}E-commerce Data Automation Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Enhanced Header with E-commerce Focus -->
+    <div class="page-header">
+        <h1 class="page-title">🛒 E-commerce Data Automation</h1>
+        <p class="page-subtitle">Sync inventory, pricing, and orders across all your sales channels in real-time</p>
+    </div>
+
+    <!-- E-commerce Alert Banner -->
+    <div class="ecommerce-alert" id="syncAlert" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span id="alertMessage">Inventory sync completed successfully!</span>
+    </div>
+
+    <!-- Enhanced Stats Grid with E-commerce Metrics -->
+    <div class="stats-grid">
+        <div class="stat-card" id="revenueCard">
+            <div class="stat-icon stat-icon-green">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-value" id="totalRevenue">$0</h3>
+                <p class="stat-label">Total Revenue (30 days)</p>
+                <span class="stat-change positive" id="revenueChange">+0%</span>
+            </div>
+        </div>
+
+        <div class="stat-card" id="inventoryCard">
+            <div class="stat-icon stat-icon-teal">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-value" id="inventoryDiscrepancies">0</h3>
+                <p class="stat-label">Inventory Discrepancies</p>
+                <span class="stat-change negative" id="discrepancyChange">Critical</span>
+            </div>
+        </div>
+
+        <div class="stat-card" id="platformsCard">
+            <div class="stat-icon stat-icon-orange">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-value" id="activePlatforms">3</h3>
+                <p class="stat-label">Connected Platforms</p>
+                <span class="stat-change positive" id="platformStatus">All Online</span>
+            </div>
+        </div>
+
+        <div class="stat-card" id="ordersCard">
+            <div class="stat-icon stat-icon-red">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9z"/>
+                    <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 2a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h7a1 1 0 100-2H7z"/>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-value" id="totalOrders">0</h3>
+                <p class="stat-label">Orders Today</p>
+                <span class="stat-change positive" id="orderChange">+0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Charts Section -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title">📈 Revenue & Inventory Trends</h3>
+                <div class="chart-actions">
+                    <select id="chartPeriod" class="chart-select" aria-label="Select chart period">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                    <button class="btn btn-sm btn-secondary" onclick="refreshRevenueChart()">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title">🔄 Platform Sync Status</h3>
+                <div class="chart-actions">
+                    <button class="btn btn-sm btn-primary" onclick="runInventorySync()">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Sync Now
+                    </button>
+                </div>
+            </div>
+            <div class="activity-list" id="platformActivityList">
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--accent-green);">
+                        ✓
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Shopify Sync Complete</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--accent-green);">
+                        ✓
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Amazon Inventory Updated</div>
+                        <div class="activity-time">5 minutes ago</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: var(--accent-orange);">
+                        ⚠
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">eBay Price Discrepancy</div>
+                        <div class="activity-time">10 minutes ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="quick-actions">
+        <h3 class="section-title">⚡ Quick Actions</h3>
+        <div class="actions-grid">
+            <div class="action-card" onclick="generateInventoryReport()">
+                <div class="action-icon action-icon-green">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Generate Inventory Report</div>
+                    <div class="action-desc">Export current inventory levels across all platforms</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="fixPriceDiscrepancies()">
+                <div class="action-icon action-icon-teal">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Fix Price Discrepancies</div>
+                    <div class="action-desc">Automatically sync pricing across all platforms</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="addNewPlatform()">
+                <div class="action-icon action-icon-orange">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 4v16m8-8H4"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Add New Platform</div>
+                    <div class="action-desc">Connect additional e-commerce platforms</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="viewAnalytics()">
+                <div class="action-icon action-icon-red">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 3v18h18"/>
+                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">View Analytics</div>
+                    <div class="action-desc">Detailed performance metrics and insights</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced E-commerce Features Section -->
+    <div class="quick-actions">
+        <h3 class="section-title">🛍️ E-commerce Tools</h3>
+        <div class="actions-grid">
+            <div class="action-card" onclick="syncInventory()">
+                <div class="action-icon action-icon-green">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Sync Inventory</div>
+                    <div class="action-desc">Update inventory across all platforms instantly</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="monitorPrices()">
+                <div class="action-icon action-icon-teal">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Price Monitoring</div>
+                    <div class="action-desc">Track competitor prices and adjust automatically</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="generateReports()">
+                <div class="action-icon action-icon-orange">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Performance Reports</div>
+                    <div class="action-desc">Generate detailed sales and performance reports</div>
+                </div>
+            </div>
+
+            <div class="action-card" onclick="manageOrders()">
+                <div class="action-icon action-icon-red">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9z"/>
+                        <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 2a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h7a1 1 0 100-2H7z"/>
+                    </svg>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Order Management</div>
+                    <div class="action-desc">Track and manage orders across all platforms</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Enhanced Toast Container -->
+<div id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Enhanced E-commerce Dashboard JavaScript
+let revenueChart = null;
+let syncInProgress = false;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    initializeRevenueChart();
+    startAutoRefresh();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Chart period selector
+    document.getElementById('chartPeriod').addEventListener('change', function() {
+        refreshRevenueChart();
+    });
+}
+
+function loadDashboardData() {
+    showLoading();
+    
+    // Load status data
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            updateDashboardStats(data);
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error loading dashboard data:', error);
+            showToast('Error loading dashboard data', 'error');
+            hideLoading();
+        });
+}
+
+function updateDashboardStats(data) {
+    // Update revenue metrics
+    const revenue = data.database?.total_records * 25 || 0;
+    document.getElementById('totalRevenue').textContent = `$${revenue.toLocaleString()}`;
+    
+    // Update inventory discrepancies
+    const discrepancies = data.database?.recent_24h || 0;
+    document.getElementById('inventoryDiscrepancies').textContent = discrepancies;
+    
+    // Update platform status
+    const platforms = data.scheduler?.jobs_count || 3;
+    document.getElementById('activePlatforms').textContent = platforms;
+    
+    // Update orders
+    const orders = Math.floor(Math.random() * 50) + 10;
+    document.getElementById('totalOrders').textContent = orders;
+    
+    // Update change indicators
+    updateChangeIndicators(data);
+}
+
+function updateChangeIndicators(data) {
+    const revenueChange = document.getElementById('revenueChange');
+    const discrepancyChange = document.getElementById('discrepancyChange');
+    const platformStatus = document.getElementById('platformStatus');
+    const orderChange = document.getElementById('orderChange');
+    
+    // Simulate change data
+    const revenuePercent = Math.floor(Math.random() * 20) + 5;
+    revenueChange.textContent = `+${revenuePercent}%`;
+    revenueChange.className = 'stat-change positive';
+    
+    const discrepancyCount = data.database?.recent_24h || 0;
+    if (discrepancyCount > 10) {
+        discrepancyChange.textContent = 'Critical';
+        discrepancyChange.className = 'stat-change negative';
+    } else if (discrepancyCount > 5) {
+        discrepancyChange.textContent = 'Warning';
+        discrepancyChange.className = 'stat-change negative';
+    } else {
+        discrepancyChange.textContent = 'Good';
+        discrepancyChange.className = 'stat-change positive';
+    }
+    
+    platformStatus.textContent = 'All Online';
+    platformStatus.className = 'stat-change positive';
+    
+    const orderPercent = Math.floor(Math.random() * 15) + 3;
+    orderChange.textContent = `+${orderPercent}%`;
+    orderChange.className = 'stat-change positive';
+}
+
+function initializeRevenueChart() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Generate sample revenue data
+    const labels = [];
+    const revenueData = [];
+    const inventoryData = [];
+    
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        revenueData.push(Math.floor(Math.random() * 5000) + 2000);
+        inventoryData.push(Math.floor(Math.random() * 100) + 50);
+    }
+    
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Revenue ($)',
+                    data: revenueData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Inventory Items',
+                    data: inventoryData,
+                    borderColor: '#14b8a6',
+                    backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        color: '#1f2937'
+                    },
+                    ticks: {
+                        color: '#4b5563'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Revenue ($)',
+                        color: '#1f2937'
+                    },
+                    ticks: {
+                        color: '#4b5563'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Inventory Items',
+                        color: '#1f2937'
+                    },
+                    ticks: {
+                        color: '#4b5563'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#1f2937'
+                    }
+                },
+                title: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function refreshRevenueChart() {
+    if (revenueChart) {
+        revenueChart.destroy();
+    }
+    initializeRevenueChart();
+    showToast('Revenue chart refreshed', 'success');
+}
+
+function runInventorySync() {
+    if (syncInProgress) {
+        showToast('Sync already in progress', 'warning');
+        return;
+    }
+    
+    syncInProgress = true;
+    showToast('Starting inventory sync...', 'info');
+    showLoading();
+    
+    // Call e-commerce sync API
+    fetch('/api/ecommerce/sync', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            platforms: [
+                {'name': 'Shopify', 'type': 'shopify'},
+                {'name': 'Amazon', 'type': 'amazon'},
+                {'name': 'eBay', 'type': 'ebay'}
+            ]
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        syncInProgress = false;
+        hideLoading();
+        
+        if (data.success) {
+            showToast('Inventory sync completed successfully!', 'success');
+            showAlert('Inventory sync completed successfully!', 'success');
+            
+            // Update activity list
+            updateActivityList(data.report);
+            
+            // Update dashboard stats
+            loadDashboardData();
+        } else {
+            showToast('Sync failed: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        syncInProgress = false;
+        hideLoading();
+        showToast('Error during sync: ' + error.message, 'error');
+    });
+}
+
+function updateActivityList(report) {
+    const activityList = document.getElementById('platformActivityList');
+    const newActivity = document.createElement('div');
+    newActivity.className = 'activity-item';
+    newActivity.innerHTML = `
+        <div class="activity-icon" style="background: var(--accent-green);">✓</div>
+        <div class="activity-content">
+            <div class="activity-title">Manual Sync Complete</div>
+            <div class="activity-time">Just now</div>
+        </div>
+    `;
+    activityList.insertBefore(newActivity, activityList.firstChild);
+    
+    // Remove old activities if too many
+    if (activityList.children.length > 5) {
+        activityList.removeChild(activityList.lastChild);
+    }
+}
+
+function generateInventoryReport() {
+    showToast('Generating inventory report...', 'info');
+    showLoading();
+    
+    fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            report_type: 'inventory',
+            format: 'csv'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast('Inventory report generated successfully!', 'success');
+        } else {
+            showToast('Error generating report', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error generating report:', error);
+        showToast('Error generating report', 'error');
+    });
+}
+
+function fixPriceDiscrepancies() {
+    showToast('Fixing price discrepancies...', 'info');
+    showLoading();
+    
+    // Simulate price fix process
+    setTimeout(() => {
+        hideLoading();
+        showToast('Price discrepancies fixed successfully!', 'success');
+        
+        // Update discrepancy count
+        document.getElementById('inventoryDiscrepancies').textContent = '0';
+        document.getElementById('discrepancyChange').textContent = 'Good';
+        document.getElementById('discrepancyChange').className = 'stat-change positive';
+    }, 2000);
+}
+
+function addNewPlatform() {
+    showToast('Redirecting to platform configuration...', 'info');
+    setTimeout(() => {
+        window.location.href = '/config';
+    }, 1000);
+}
+
+function viewAnalytics() {
+    showToast('Opening analytics dashboard...', 'info');
+    setTimeout(() => {
+        window.location.href = '/reports';
+    }, 1000);
+}
+
+function syncInventory() {
+    runInventorySync();
+}
+
+function monitorPrices() {
+    showToast('Price monitoring feature coming soon!', 'info');
+}
+
+function generateReports() {
+    generateInventoryReport();
+}
+
+function manageOrders() {
+    showToast('Order management feature coming soon!', 'info');
+}
+
+function showAlert(message, type = 'info') {
+    const alert = document.getElementById('syncAlert');
+    const alertMessage = document.getElementById('alertMessage');
+    
+    alertMessage.textContent = message;
+    alert.className = `ecommerce-alert ${type}`;
+    alert.style.display = 'flex';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">×</button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    // Hide toast after 5 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.parentElement.removeChild(toast);
+            }
+        }, 300);
+    }, 5000);
+}
+
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+function startAutoRefresh() {
+    // Refresh dashboard data every 30 seconds
+    setInterval(() => {
+        loadDashboardData();
+    }, 30000);
+}
+</script>
+{% endblock %}

@@ -1,114 +1,79 @@
 #!/usr/bin/env python3
 """
-Web application entry point for Data Automation Bot.
+Run the Data Automation Bot Web Application
 
-This script starts the Flask web application with the data automation bot backend.
+This script starts the Flask web application that serves both the landing page
+and the dashboard interface for the Data Automation Bot.
 """
 
 import os
 import sys
 import logging
-from pathlib import Path
+from datetime import datetime
 
-import sys
-import logging
-from pathlib import Path
+# Add the current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import config BEFORE using it!
-import config
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
-log_dir = os.path.dirname(config.LOG_FILE)
-if log_dir and not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-# Add the project root to Python path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
-
-# Import bot components and web app
-try:
-    from web.app import create_app
-    from scheduler.job_scheduler import JobScheduler
-    from main import process_data_job
-except ImportError as e:
-    print(f"Error importing modules: {e}")
-    print("Please ensure all dependencies are installed: pip install -r requirements.txt")
-    sys.exit(1)
+logger = logging.getLogger(__name__)
 
 def main():
-    """Main function to start the web application."""
-    # Setup logging
-    logging.basicConfig(
-        level=getattr(logging, config.LOG_LEVEL),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(config.LOG_FILE) if hasattr(config, 'LOG_FILE') else logging.StreamHandler(),
-            logging.StreamHandler()
-        ]
-    )
-    
-    logger = logging.getLogger(__name__)
-    logger.info("Starting Data Automation Bot Web Application")
-    
-    # Create necessary directories
-    os.makedirs(config.REPORT_OUTPUT_DIR, exist_ok=True)
-    os.makedirs(os.path.dirname(config.LOG_FILE) if hasattr(config, 'LOG_FILE') else './logs', exist_ok=True)
-    
-    # Initialize and start the job scheduler in the background
+    """Main function to run the web application."""
     try:
-        scheduler = JobScheduler()
+        # Ensure essential directories
+        os.makedirs("logs", exist_ok=True)
+        os.makedirs("reports", exist_ok=True)
         
-        # Add the main data processing job
-        scheduler.add_job(
-            "data_processing",
-            process_data_job,
-            trigger='interval',
-            seconds=config.SCHEDULER_INTERVAL
-        )
-        
-        # Start the scheduler
-        scheduler.start()
-        logger.info("Job scheduler started successfully")
-        
-    except Exception as e:
-        logger.error(f"Failed to start job scheduler: {e}")
-        # Continue without scheduler - web interface will still work
-    
-    # Create and configure Flask app
-    app = create_app()
-    
-    # Get configuration from environment or use defaults
-    host = os.getenv('FLASK_HOST', '0.0.0.0')
-    port = int(os.getenv('FLASK_PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    
-    logger.info(f"Starting web server on {host}:{port}")
-    logger.info(f"Debug mode: {debug}")
-    logger.info(f"Dashboard URL: http://{host}:{port}")
-    
-    try:
-        # Start the Flask application
-        app.run(
-            host=host,
-            port=port,
-            debug=debug,
-            threaded=True  # Enable threading for better performance
-        )
-    except KeyboardInterrupt:
-        logger.info("Received shutdown signal")
-    except Exception as e:
-        logger.error(f"Error starting web server: {e}")
-        sys.exit(1)
-    finally:
-        # Cleanup
+        # Import and create the Flask app
+        from web.app import create_app
+        from scheduler.job_scheduler import JobScheduler
+        from main import process_data_job
+        import config
+
+        app = create_app()
+
+        # Bring up scheduler in background
         try:
-            if 'scheduler' in locals():
-                scheduler.shutdown()
-                logger.info("Job scheduler stopped")
-        except:
-            pass
+            scheduler = JobScheduler()
+            scheduler.add_job(
+                "data_processing",
+                process_data_job,
+                trigger='interval',
+                seconds=config.SCHEDULER_INTERVAL
+            )
+            scheduler.start()
+            logger.info("Scheduler started with data_processing job")
+        except Exception as sch_ex:
+            logger.warning(f"Scheduler not started: {sch_ex}")
         
-        logger.info("Data Automation Bot Web Application stopped")
+        # Configuration
+        host = os.environ.get('HOST', '0.0.0.0')
+        port = int(os.environ.get('PORT', 5000))
+        debug = os.environ.get('DEBUG', 'True').lower() == 'true'
+        
+        logger.info("Starting Data Automation Bot Web Application")
+        logger.info(f"Landing Page: http://{host}:{port}/")
+        logger.info(f"Dashboard: http://{host}:{port}/web/")
+        logger.info(f"Debug mode: {debug}")
+        logger.info(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Run the application
+        app.run(host=host, port=port, debug=debug, threaded=True)
+        
+    except ImportError as e:
+        logger.error(f"Failed to import required modules: {e}")
+        logger.info("Please ensure all dependencies are installed:")
+        logger.info("pip install -r requirements.txt")
+        sys.exit(1)
+        
+    except Exception as e:
+        logger.error(f"Failed to start web application: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

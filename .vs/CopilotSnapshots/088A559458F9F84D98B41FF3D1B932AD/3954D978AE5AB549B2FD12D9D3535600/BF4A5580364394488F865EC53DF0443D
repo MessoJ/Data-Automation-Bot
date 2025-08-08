@@ -1,0 +1,1656 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Data Automation - Sync Inventory Across All Platforms</title>
+    <meta name="description"
+        content="Automate inventory sync across Shopify, Amazon, eBay and more. Save 20+ hours/week and increase revenue by 15-25%.">
+    <link rel="stylesheet" href="web/static/css/main.css">
+    <style>
+        /* Professional SaaS Landing Page Styles */
+        :root {
+            --primary-color: #16a085;
+            /* Teal instead of blue */
+            --primary-dark: #107869;
+            --accent-color: #f39c12;
+            /* Amber instead of cyan */
+            --accent-dark: #d68910;
+            --success-color: #27ae60;
+            /* Forest green */
+            --warning-color: #e67e22;
+            /* Orange */
+            --error-color: #c0392b;
+            /* Red */
+            --neutral-dark: #2c3e50;
+            /* Dark slate */
+            --neutral-medium: #34495e;
+            --neutral-light: #ecf0f1;
+            --shadow-subtle: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 8px 15px rgba(0, 0, 0, 0.1);
+            --shadow-strong: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--neutral-dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            background-color: white;
+            box-shadow: var(--shadow-subtle);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--neutral-dark);
+            text-decoration: none;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.75rem;
+            color: var(--primary-color);
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .nav-link {
+            color: var(--neutral-dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--neutral-dark) 0%, var(--neutral-medium) 100%);
+            padding: 5rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-title span {
+            color: var(--accent-color);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2.5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .cta-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .cta-button.secondary {
+            background-color: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .cta-button.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .platform-logos {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .platform-logo {
+            opacity: 0.7;
+            height: 35px;
+            transition: opacity 0.3s ease;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 4px;
+        }
+
+        .platform-logo:hover {
+            opacity: 1;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--neutral-dark);
+        }
+
+        .section-subtitle {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 1.125rem;
+            color: #666;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .demo-video {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 3rem;
+            margin: 4rem 0;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            background-color: #f5f5f5;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .video-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 1.125rem;
+        }
+
+        .features-section {
+            padding: 5rem 0;
+            background-color: #f9f9f9;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow-subtle);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--neutral-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .workflow-section {
+            padding: 5rem 0;
+            background-color: white;
+        }
+
+        .workflow-steps {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 3rem;
+        }
+
+        .step-number {
+            background-color: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--neutral-dark);
+        }
+
+        .step-content p {
+            color: #666;
+            margin-bottom: 0.75rem;
+        }
+
+        .pricing-section {
+            padding: 5rem 0;
+            background-color: #f9f9f9;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .pricing-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow-subtle);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card.featured {
+            border-top: 4px solid var(--primary-color);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .pricing-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--neutral-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+        }
+
+        .pricing-period {
+            color: #999;
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin: 2rem 0;
+            text-align: left;
+            padding: 0;
+        }
+
+        .pricing-features li {
+            padding: 0.75rem 0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .testimonials-section {
+            padding: 5rem 0;
+            background-color: white;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .testimonial-card {
+            background-color: #f9f9f9;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .testimonial-text {
+            position: relative;
+            font-style: italic;
+            color: #555;
+            margin-bottom: 1.5rem;
+            font-size: 1.125rem;
+        }
+
+        .testimonial-text::before {
+            content: '"';
+            position: absolute;
+            top: -20px;
+            left: -10px;
+            font-size: 3rem;
+            color: rgba(0, 0, 0, 0.1);
+            font-family: serif;
+        }
+
+        .testimonial-author {
+            color: var(--neutral-dark);
+            font-weight: 600;
+        }
+
+        .testimonial-company {
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        .faq-section {
+            padding: 5rem 0;
+            background-color: #f9f9f9;
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .faq-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .faq-question {
+            background-color: white;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            color: var(--neutral-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .faq-answer {
+            background-color: white;
+            border-radius: 0 0 0.5rem 0.5rem;
+            padding: 0 1.25rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 1.25rem;
+            max-height: 1000px;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .contact-section {
+            padding: 5rem 0;
+            background-color: var(--neutral-dark);
+            color: white;
+        }
+
+        .contact-content {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .footer {
+            background-color: var(--neutral-medium);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 3rem 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: white;
+            color: var(--neutral-dark);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 10px;
+            box-shadow: var(--shadow-medium);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            min-width: 250px;
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .pricing-grid,
+            .features-grid,
+            .testimonial-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow-step {
+                flex-direction: column;
+            }
+
+            .step-number {
+                margin-bottom: 1rem;
+                margin-right: 0;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+        }
+
+        /* Mobile menu toggle */
+        .mobile-toggle {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                color: var(--neutral-dark);
+                cursor: pointer;
+            }
+
+            .nav-menu.active {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: white;
+                padding: 1rem 0;
+                box-shadow: var(--shadow-subtle);
+            }
+        }
+
+        /* Spinner animation for buttons */
+        .spinner {
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Trial signup modal styles */
+        .trial-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .trial-modal {
+            background-color: white;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-strong);
+            animation: slideUp 0.3s ease;
+        }
+
+        .trial-modal-header {
+            padding: 2rem 2rem 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .trial-modal-header h2 {
+            color: var(--neutral-dark);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .trial-modal-header p {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background-color: #f0f0f0;
+            color: var(--neutral-dark);
+        }
+
+        .trial-modal-body {
+            padding: 0 2rem 2rem;
+        }
+
+        .trial-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: var(--neutral-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group input {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(22, 160, 133, 0.1);
+        }
+
+        .trial-features {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .trial-features h4 {
+            color: var(--neutral-dark);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .trial-features ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .trial-features li {
+            padding: 0.5rem 0;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .trial-actions {
+            text-align: center;
+        }
+
+        .btn-trial-start {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .btn-trial-start:not(:disabled):hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .btn-trial-start:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-loader {
+            display: none;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        .trial-note {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* Success modal styles */
+        .success-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .success-modal {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 3rem;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-strong);
+            animation: slideUp 0.3s ease;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-modal h2 {
+            color: var(--success-color);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .success-modal p {
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .success-details {
+            background-color: #f0f9ff;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .success-details p {
+            margin: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile responsive modal */
+        @media (max-width: 768px) {
+            .trial-modal {
+                width: 95%;
+                max-height: 95vh;
+            }
+
+            .trial-modal-header {
+                padding: 1.5rem 1.5rem 1rem;
+            }
+
+            .trial-modal-body {
+                padding: 0 1.5rem 1.5rem;
+            }
+
+            .success-modal {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toast-container"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                Data Automation Bot
+            </a>
+            <button class="mobile-toggle">☰</button>
+            <div class="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#testimonials" class="nav-link">Testimonials</a>
+                <a href="#faq" class="nav-link">FAQ</a>
+                <a href="/web/" class="nav-link">Dashboard</a>
+                <a href="#contact" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">🛒 E-commerce <span>Data Automation</span></h1>
+            <p class="hero-subtitle">
+                Sync inventory, pricing, and orders across all your sales channels in real-time.
+                Save 20+ hours/week and increase revenue by 15-25%.
+            </p>
+            <div class="hero-cta">
+                <a href="#contact" class="cta-button">Start Free Trial</a>
+                <a href="#demo" class="cta-button secondary">Watch Demo</a>
+            </div>
+            <div class="platform-logos">
+                <div class="platform-logo">Shopify</div>
+                <div class="platform-logo">Amazon</div>
+                <div class="platform-logo">eBay</div>
+                <div class="platform-logo">WooCommerce</div>
+                <div class="platform-logo">Etsy</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Video Section -->
+    <section id="demo" class="demo-video">
+        <div class="hero-content">
+            <h2 class="section-title">See It In Action</h2>
+            <p class="section-subtitle">Watch how easy it is to sync inventory across platforms and save hours of
+                manual work</p>
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <div style="text-align: center;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor"
+                            style="margin-bottom: 1rem;">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <div>Demo Video Coming Soon</div>
+                        <div style="font-size: 0.875rem; margin-top: 0.75rem;">
+                            Showing real-time inventory sync across multiple platforms
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="hero-content">
+            <h2 class="section-title">Key Features</h2>
+            <p class="section-subtitle">Our platform offers everything you need to streamline your e-commerce
+                operations</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--primary-color);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Real-Time Sync</h3>
+                    <p class="feature-desc">
+                        Automatically sync inventory and pricing across Shopify, Amazon, eBay, and more every 15
+                        minutes.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--success-color);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3H4a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6M9 17v1a3 3 0 0 0 6 0v-1" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Smart Alerts</h3>
+                    <p class="feature-desc">
+                        Get instant notifications when inventory is low or prices are inconsistent across platforms.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--accent-color);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M3 3v18h18" />
+                            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Analytics Dashboard</h3>
+                    <p class="feature-desc">
+                        Track performance across all platforms with detailed analytics and revenue insights.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--warning-color);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Easy Setup</h3>
+                    <p class="feature-desc">
+                        Connect your platforms in minutes with our simple API integration process.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--neutral-dark);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M12 5l9 4-9 4-9-4 9-4zm0 0v6m-9 2l9 4 9-4" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Bulk Updates</h3>
+                    <p class="feature-desc">
+                        Make changes to thousands of products at once and sync instantly across all platforms.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"
+                        style="background: var(--primary-dark);">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                            <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Automated Reports</h3>
+                    <p class="feature-desc">
+                        Receive daily or weekly reports on sales, inventory levels, and discrepancies.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works Section -->
+    <section id="how-it-works" class="workflow-section">
+        <div class="hero-content">
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-subtitle">Getting started is easy with our simple 4-step process</p>
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Connect Your Platforms</h3>
+                        <p>Link your Shopify, Amazon, eBay, and other e-commerce platforms with our secure API
+                            connections.</p>
+                        <p>No coding required - just click authorize and we handle the rest.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Set Your Rules</h3>
+                        <p>Choose how you want inventory and prices to sync across platforms. Create custom rules for
+                            specific products.</p>
+                        <p>Define inventory buffers and price adjustments per marketplace.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Activate Automated Sync</h3>
+                        <p>Turn on real-time synchronization and let our system automatically update inventory and prices
+                            across all channels.</p>
+                        <p>Set your preferred sync intervals - from 15 minutes to daily updates.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Monitor and Optimize</h3>
+                        <p>Use our dashboard to track performance, view analytics, and receive smart alerts for any
+                            issues.</p>
+                        <p>Continuously optimize your operations based on our data-driven insights.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+        <div class="hero-content">
+            <h2 class="section-title">Simple, Transparent Pricing</h2>
+            <p class="section-subtitle">Choose the plan that fits your business needs</p>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Starter</h3>
+                    <div class="pricing-price">$99<span class="pricing-period">/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 3 platforms</li>
+                        <li>Daily sync (24 hours)</li>
+                        <li>Basic discrepancy alerts</li>
+                        <li>Email support</li>
+                        <li>Standard reports</li>
+                        <li>1,000 SKUs limit</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('starter')">Start Free Trial</button>
+                </div>
+
+                <div class="pricing-card featured">
+                    <h3 class="pricing-title">Professional</h3>
+                    <div class="pricing-price">$199<span class="pricing-period">/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 10 platforms</li>
+                        <li>Real-time sync (15 min)</li>
+                        <li>Advanced analytics</li>
+                        <li>Priority support</li>
+                        <li>Custom integrations</li>
+                        <li>Advanced reports</li>
+                        <li>10,000 SKUs limit</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('professional')">Start Free Trial</button>
+                </div>
+
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Enterprise</h3>
+                    <div class="pricing-price">$399<span class="pricing-period">/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>Unlimited platforms</li>
+                        <li>Custom sync intervals</li>
+                        <li>White-label dashboard</li>
+                        <li>Dedicated support</li>
+                        <li>API access</li>
+                        <li>Custom development</li>
+                        <li>Unlimited SKUs</li>
+                    </ul>
+                    <button class="cta-button" onclick="startTrial('enterprise')">Start Free Trial</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials-section">
+        <div class="hero-content">
+            <h2 class="section-title">What Our Customers Say</h2>
+            <p class="section-subtitle">Real results from real businesses using our platform</p>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-text">
+                        "I was spending 3 hours every day updating inventory across Shopify, Amazon, and eBay.
+                        Now it's automated and I can focus on growing my business. Revenue increased by 22% in the
+                        first month!"
+                    </p>
+                    <div class="testimonial-author">Sarah Johnson</div>
+                    <div class="testimonial-company">CEO, Fashion Forward Boutique</div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-text">
+                        "We manage 50+ client stores. This tool saves us 40 hours/week and prevents costly inventory
+                        errors.
+                        Our clients love the real-time sync capabilities."
+                    </p>
+                    <div class="testimonial-author">Mike Chen</div>
+                    <div class="testimonial-company">Founder, E-commerce Solutions Agency</div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-text">
+                        "After implementing this system, we've completely eliminated overselling issues. Our
+                        customer satisfaction ratings have improved dramatically and returns are down 35%."
+                    </p>
+                    <div class="testimonial-author">David Wilson</div>
+                    <div class="testimonial-company">Operations Director, Tech Gadgets Inc.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+        <div class="hero-content">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        How long does it take to set up?
+                        <span class="toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Most customers are up and running within 30 minutes. Our platform uses API connections to
+                            quickly link with your existing stores. Our setup wizard will guide you through each step of
+                            the process.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        Which platforms do you support?
+                        <span class="toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We currently support Shopify, Amazon, eBay, WooCommerce, Etsy, Walmart Marketplace,
+                            BigCommerce, Magento, and Square. We're constantly adding more integrations.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        Do I need technical knowledge?
+                        <span class="toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No technical knowledge is required. Our user-friendly interface is designed for e-commerce
+                            business owners, not developers. If you ever need help, our support team is available to
+                            assist.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        Is there a limit to how many products I can sync?
+                        <span class="toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>The Starter plan supports up to 1,000 SKUs, Professional up to 10,000 SKUs, and Enterprise
+                            has unlimited SKUs. If you need a custom solution, contact our sales team.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        How secure is my data?
+                        <span class="toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We use bank-level encryption for all data transfers. Your store credentials are never stored
+                            in plain text, and we use OAuth when available. We're also compliant with GDPR and CCPA
+                            regulations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="contact-content">
+            <h2 class="section-title" style="color: white;">Ready to Get Started?</h2>
+            <p style="margin-bottom: 2rem;">
+                Start your 14-day free trial. No credit card required.
+            </p>
+            <div>
+                <button class="cta-button" onclick="startTrial('professional')">Start Free Trial</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#">Home</a>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#testimonials">Testimonials</a>
+                <a href="#faq">FAQ</a>
+                <a href="/privacy-policy">Privacy Policy</a>
+                <a href="/terms-of-service">Terms of Service</a>
+                <a href="/contact">Contact</a>
+            </div>
+            <p>&copy; 2024 Data Automation Bot. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile navigation toggle
+        const mobileToggle = document.querySelector('.mobile-toggle');
+        const navMenu = document.querySelector('.nav-menu');
+
+        if (mobileToggle && navMenu) {
+            mobileToggle.addEventListener('click', function () {
+                navMenu.classList.toggle('active');
+            });
+        }
+
+        // FAQ accordions
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const faqItem = question.parentElement;
+                faqItem.classList.toggle('active');
+
+                // Update the toggle symbol
+                const toggle = question.querySelector('.toggle');
+                toggle.textContent = faqItem.classList.contains('active') ? '-' : '+';
+            });
+        });
+
+        // Improved toast notification system
+        function showToast(message, type = 'info') {
+            const toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">×</button>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Enhanced Stripe Payment Integration
+        let stripe;
+        let stripeConfigLoaded = false;
+
+        // Initialize Stripe
+        async function initializeStripe() {
+            if (stripeConfigLoaded) return;
+            
+            try {
+                const response = await fetch('/api/stripe/config');
+                const config = await response.json();
+                stripe = Stripe(config.publishableKey);
+                stripeConfigLoaded = true;
+            } catch (error) {
+                console.error('Error loading Stripe configuration:', error);
+                showToast('Payment system temporarily unavailable', 'warning');
+            }
+        }
+
+        // Start trial with Stripe integration
+        async function startTrial(plan) {
+            showToast(`Starting your ${plan} trial...`, 'info');
+            
+            try {
+                // Initialize Stripe if not already done
+                await initializeStripe();
+                
+                // Show trial signup modal
+                showTrialSignupModal(plan);
+                
+            } catch (error) {
+                console.error('Error starting trial:', error);
+                showToast('Error starting trial. Please try again.', 'error');
+            }
+        }
+
+        // Show trial signup modal with email collection
+        function showTrialSignupModal(plan) {
+            const modal = document.createElement('div');
+            modal.className = 'trial-modal-overlay';
+            modal.innerHTML = `
+                <div class="trial-modal">
+                    <div class="trial-modal-header">
+                        <h2>Start Your 14-Day Free Trial</h2>
+                        <p>Get full access to ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan features</p>
+                        <button class="modal-close" onclick="closeTrialModal()">&times;</button>
+                    </div>
+                    <div class="trial-modal-body">
+                        <div class="trial-form">
+                            <div class="input-group">
+                                <label for="trial-name">Full Name</label>
+                                <input type="text" id="trial-name" placeholder="Enter your full name" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="trial-email">Email Address</label>
+                                <input type="email" id="trial-email" placeholder="Enter your email address" required>
+                            </div>
+                            <div class="trial-features">
+                                <h4>✨ What's included in your trial:</h4>
+                                <ul>
+                                    <li>✅ Full access to all ${plan} features</li>
+                                    <li>✅ Connect multiple platforms</li>
+                                    <li>✅ Real-time inventory sync</li>
+                                    <li>✅ Advanced analytics</li>
+                                    <li>✅ Priority support</li>
+                                    <li>✅ No credit card required</li>
+                                </ul>
+                            </div>
+                            <div class="trial-actions">
+                                <button class="btn-trial-start" onclick="processTrial('${plan}')" disabled>
+                                    <span class="btn-text">Start Free Trial</span>
+                                    <span class="btn-loader" style="display: none;">
+                                        <svg class="spinner" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4"></circle>
+                                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                                <p class="trial-note">14 days free • Cancel anytime • No hidden fees</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listeners
+            const nameInput = document.getElementById('trial-name');
+            const emailInput = document.getElementById('trial-email');
+            const startButton = document.querySelector('.btn-trial-start');
+            
+            function validateForm() {
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const isValid = name && email && isValidEmail(email);
+                startButton.disabled = !isValid;
+            }
+            
+            nameInput.addEventListener('input', validateForm);
+            emailInput.addEventListener('input', validateForm);
+            
+            // Focus on first input
+            setTimeout(() => nameInput.focus(), 100);
+        }
+
+        // Process trial signup
+        async function processTrial(plan) {
+            const nameInput = document.getElementById('trial-name');
+            const emailInput = document.getElementById('trial-email');
+            const startButton = document.querySelector('.btn-trial-start');
+            const btnText = startButton.querySelector('.btn-text');
+            const btnLoader = startButton.querySelector('.btn-loader');
+            
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            
+            if (!name || !email || !isValidEmail(email)) {
+                showToast('Please enter valid name and email', 'error');
+                return;
+            }
+            
+            // Show loading state
+            startButton.disabled = true;
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline-flex';
+            
+            try {
+                const response = await fetch('/api/stripe/create-trial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        plan: plan,
+                        name: name,
+                        email: email
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeTrialModal();
+                    showSuccessMessage(result);
+                    
+                    // Redirect to dashboard after delay
+                    setTimeout(() => {
+                        window.location.href = '/web/';
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Failed to start trial');
+                }
+                
+            } catch (error) {
+                console.error('Error processing trial:', error);
+                showToast(error.message || 'Error starting trial. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                startButton.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+            }
+        }
+
+        // Close trial modal
+        function closeTrialModal() {
+            const modal = document.querySelector('.trial-modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Show success message
+        function showSuccessMessage(result) {
+            const successModal = document.createElement('div');
+            successModal.className = 'success-modal-overlay';
+            successModal.innerHTML = `
+                <div class="success-modal">
+                    <div class="success-icon">✅</div>
+                    <h2>Trial Started Successfully!</h2>
+                    <p>Your 14-day free trial for <strong>${result.plan}</strong> is now active.</p>
+                    <div class="success-details">
+                        <p>🎉 Full access to all features</p>
+                        <p>📧 Confirmation email sent</p>
+                        <p>⏰ Trial ends: ${new Date(result.trialEnd * 1000).toLocaleDateString()}</p>
+                    </div>
+                    <p>Redirecting to your dashboard...</p>
+                </div>
+            `;
+            
+            document.body.appendChild(successModal);
+            
+            // Auto-close after 3 seconds
+            setTimeout(() => {
+                successModal.remove();
+            }, 3000);
+        }
+
+        // Email validation
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Checkout session for immediate payment
+        async function createCheckoutSession(plan) {
+            try {
+                const response = await fetch('/api/stripe/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ plan: plan })
+                });
+                
+                const session = await response.json();
+                
+                if (session.success) {
+                    // Redirect to Stripe Checkout
+                    window.location.href = session.url;
+                } else {
+                    throw new Error(session.error || 'Failed to create checkout session');
+                }
+                
+            } catch (error) {
+                console.error('Error creating checkout session:', error);
+                showToast('Payment system error. Please try again.', 'error');
+            }
+        }
+
+        // Initialize Stripe when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeStripe();
+        });
+    </script>
+</body>
+
+</html>

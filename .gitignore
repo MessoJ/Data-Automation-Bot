@@ -40,3 +40,4 @@ temp_data/
 reports/
 .coverage
 htmlcov/
+node_modules

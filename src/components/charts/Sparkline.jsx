@@ -1,0 +1,68 @@
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+} from 'chart.js'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler
+)
+
+const Sparkline = ({ data, color = 'primary-500' }) => {
+  const colorMap = {
+    'success-500': 'rgba(34, 197, 94, 1)',
+    'info-500': 'rgba(59, 130, 246, 1)',
+    'warning-500': 'rgba(245, 158, 11, 1)',
+    'primary-500': 'rgba(22, 160, 133, 1)'
+  }
+
+  const borderColor = colorMap[color] || colorMap['primary-500']
+  const backgroundColor = borderColor.replace('1)', '0.2)')
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false }
+    },
+    scales: {
+      x: { display: false },
+      y: { display: false }
+    },
+    elements: {
+      point: { radius: 0, hoverRadius: 0 },
+      line: { tension: 0.4 }
+    },
+    interaction: {
+      intersect: false
+    }
+  }
+
+  const chartData = {
+    labels: data.map((_, index) => index),
+    datasets: [
+      {
+        data,
+        borderColor,
+        backgroundColor,
+        borderWidth: 2,
+        fill: true,
+      },
+    ],
+  }
+
+  return <Line data={chartData} options={options} />
+}
+
+export default Sparkline

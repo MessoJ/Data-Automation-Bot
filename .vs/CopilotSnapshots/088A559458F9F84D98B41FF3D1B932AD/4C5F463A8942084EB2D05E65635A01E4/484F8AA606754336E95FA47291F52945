@@ -1,0 +1,115 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Reports - Data Automation Bot{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">Reports</h1>
+        <p class="page-subtitle">Generate and manage data automation reports</p>
+    </div>
+
+    <!-- Report Generation -->
+    <div class="report-generation">
+        <h3 class="section-title">Generate New Report</h3>
+        <div class="form-card">
+            <form id="reportForm" class="report-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reportType" class="form-label">Report Type</label>
+                        <select id="reportType" name="type" class="form-select">
+                            <option value="daily">Daily Summary</option>
+                            <option value="weekly">Weekly Summary</option>
+                            <option value="trend">Trend Analysis</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reportFormat" class="form-label">Format</label>
+                        <select id="reportFormat" name="format" class="form-select">
+                            <option value="html">HTML (Web View)</option>
+                            <option value="csv">CSV (Spreadsheet)</option>
+                            <option value="json">JSON (Data)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" id="trendOptions" style="display: none;">
+                    <div class="form-group">
+                        <label for="dataType" class="form-label">Data Type</label>
+                        <input type="text" id="dataType" name="data_type" class="form-input" 
+                               placeholder="Enter data type (required for trend reports)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="trendDays" class="form-label">Analysis Period (Days)</label>
+                        <select id="trendDays" name="days" class="form-select">
+                            <option value="7">7 days</option>
+                            <option value="30" selected>30 days</option>
+                            <option value="90">90 days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9z"/>
+                            <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"/>
+                        </svg>
+                        Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="reports-list">
+        <div class="reports-header">
+            <h3 class="section-title">Available Reports</h3>
+            <button class="btn btn-secondary" onclick="refreshReports()">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
+
+        <div class="reports-grid" id="reportsGrid">
+            <!-- Reports will be loaded here -->
+            <div class="loading-placeholder">
+                <div class="loading-spinner"></div>
+                <p>Loading reports...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Preview Modal -->
+<div class="modal" id="reportModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modalTitle">Report Preview</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <iframe id="reportPreview" class="report-iframe"></iframe>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            <a id="downloadLink" class="btn btn-primary" download>
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+                </svg>
+                Download
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

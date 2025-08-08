@@ -1,0 +1,85 @@
+﻿import { motion } from 'framer-motion'
+import { TrendingUp, TrendingDown } from 'lucide-react'
+import Sparkline from '../charts/Sparkline'
+
+const KPICard = ({ 
+  title, 
+  value, 
+  change, 
+  trend, 
+  icon: Icon, 
+  color, 
+  detail, 
+  sparklineData 
+}) => {
+  const colorClasses = {
+    success: {
+      bg: 'bg-success-500',
+      text: 'text-success-700',
+      pattern: 'bg-success-500'
+    },
+    info: {
+      bg: 'bg-info-500',
+      text: 'text-info-700',
+      pattern: 'bg-info-500'
+    },
+    warning: {
+      bg: 'bg-warning-500',
+      text: 'text-warning-700',
+      pattern: 'bg-warning-500'
+    },
+    primary: {
+      bg: 'bg-primary-500',
+      text: 'text-primary-700',
+      pattern: 'bg-primary-500'
+    }
+  }
+
+  const colors = colorClasses[color] || colorClasses.primary
+
+  return (
+    <motion.div
+      whileHover={{ y: -4, scale: 1.02 }}
+      className={`kpi-card ${color} group cursor-pointer`}
+    >
+      {/* Background Pattern */}
+      <div className={`absolute -top-1/2 -right-1/2 w-full h-full rounded-full opacity-5 ${colors.pattern}`} />
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className={`w-12 h-12 ${colors.bg} rounded-xl flex items-center justify-center shadow-lg`}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
+          
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm font-semibold ${colors.text} bg-current bg-opacity-10`}>
+            {trend === 'up' && <TrendingUp className="w-4 h-4" />}
+            {trend === 'down' && <TrendingDown className="w-4 h-4" />}
+            <span>{change}</span>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="mb-4">
+          <h3 className="text-3xl font-extrabold text-neutral-800 mb-1 group-hover:text-gradient transition-all">
+            {value}
+          </h3>
+          <p className="text-base text-neutral-600 font-medium">{title}</p>
+          {detail && (
+            <p className="text-sm text-neutral-500 mt-2">{detail}</p>
+          )}
+        </div>
+
+        {/* Sparkline */}
+        {sparklineData && (
+          <div className="absolute bottom-4 right-6 w-24 h-10 opacity-70">
+            <Sparkline data={sparklineData} color={colors.bg.replace('bg-', '')} />
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+export default KPICard

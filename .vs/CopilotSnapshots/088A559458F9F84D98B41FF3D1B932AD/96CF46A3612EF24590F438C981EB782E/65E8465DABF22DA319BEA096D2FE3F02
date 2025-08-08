@@ -1,0 +1,645 @@
+﻿"""
+Flask application factory and configuration.
+
+This module creates and configures the Flask application for the 
+Data Automation Bot web interface.
+"""
+
+import os
+import logging
+from flask import Flask, render_template, jsonify, request, send_file, send_from_directory, redirect, url_for
+from flask_cors import CORS
+from datetime import datetime, timedelta
+import json
+import stripe
+
+# Import bot components
+from database.db_manager import DatabaseManager
+from reporting.report_generator import ReportGenerator
+from scheduler.job_scheduler import JobScheduler
+from api.api_client import APIClient
+import config
+
+# Configure Stripe
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_...')  # Replace with your actual key
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_...')  # Replace with your actual key
+
+
+def create_app():
+    """Create and configure the Flask application."""
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    
+    # Enable CORS for API endpoints
+    CORS(app)
+    
+    # Initialize components
+    db_manager = DatabaseManager()
+    # Initialize database tables
+    db_manager.initialize_database()
+    report_generator = ReportGenerator()
+    job_scheduler = JobScheduler()
+    api_client = APIClient()
+    
+    @app.route('/landing')
+    def landing_page():
+        """Landing page for marketing and trial signups."""
+        return send_from_directory('.', 'landing_page.html')
+    
+    @app.route('/')
+    def index():
+        """Root route - redirect to landing page or dashboard based on context."""
+        # In production, you might want to check if user is authenticated
+        # For now, redirect to landing page
+        return landing_page()
+    
+    @app.route('/web/')
+    def dashboard():
+        """Main dashboard page."""
+        return render_template('dashboard.html')
+    
+    # Stripe Payment Integration Endpoints
+    @app.route('/api/stripe/config')
+    def get_stripe_config():
+        """Get Stripe publishable key for frontend."""
+        return jsonify({
+            'publishableKey': STRIPE_PUBLISHABLE_KEY
+        })
+    
+    @app.route('/api/stripe/create-trial', methods=['POST'])
+    def create_trial_subscription():
+        """Create a trial subscription with Stripe."""
+        try:
+            data = request.json
+            plan = data.get('plan', 'professional')
+            email = data.get('email')
+            name = data.get('name')
+            
+            if not email:
+                return jsonify({'error': 'Email is required'}), 400
+            
+            # Define pricing plans
+            pricing_plans = {
+                'starter': {
+                    'price_id': os.environ.get('STRIPE_STARTER_PRICE_ID', 'price_starter'),
+                    'amount': 9900,  # $99.00 in cents
+                    'name': 'Starter Plan'
+                },
+                'professional': {
+                    'price_id': os.environ.get('STRIPE_PROFESSIONAL_PRICE_ID', 'price_professional'),
+                    'amount': 19900,  # $199.00 in cents
+                    'name': 'Professional Plan'
+                },
+                'enterprise': {
+                    'price_id': os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_enterprise'),
+                    'amount': 39900,  # $399.00 in cents
+                    'name': 'Enterprise Plan'
+                }
+            }
+            
+            selected_plan = pricing_plans.get(plan, pricing_plans['professional'])
+            
+            # Create or retrieve customer
+            try:
+                customer = stripe.Customer.create(
+                    email=email,
+                    name=name,
+                    metadata={
+                        'plan_type': plan,
+                        'trial_started': datetime.now().isoformat()
+                    }
+                )
+            except stripe.error.StripeError as e:
+                # Try to find existing customer
+                existing_customers = stripe.Customer.list(email=email, limit=1)
+                if existing_customers.data:
+                    customer = existing_customers.data[0]
+                else:
+                    return jsonify({'error': str(e)}), 400
+            
+            # Create subscription with 14-day trial
+            try:
+                subscription = stripe.Subscription.create(
+                    customer=customer.id,
+                    items=[{
+                        'price': selected_plan['price_id'],
+                    }],
+                    trial_period_days=14,
+                    payment_behavior='default_incomplete',
+                    payment_settings={'save_default_payment_method': 'on_subscription'},
+                    expand=['latest_invoice.payment_intent'],
+                )
+                
+                return jsonify({
+                    'success': True,
+                    'subscriptionId': subscription.id,
+                    'customerId': customer.id,
+                    'clientSecret': subscription.latest_invoice.payment_intent.client_secret if subscription.latest_invoice else None,
+                    'trialEnd': subscription.trial_end,
+                    'plan': selected_plan['name'],
+                    'message': f'14-day trial started successfully for {selected_plan["name"]}'
+                })
+                
+            except stripe.error.StripeError as e:
+                return jsonify({'error': str(e)}), 400
+            
+        except Exception as e:
+            logging.error(f"Error creating trial subscription: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/stripe/create-checkout-session', methods=['POST'])
+    def create_checkout_session():
+        """Create a Stripe Checkout session for immediate payment."""
+        try:
+            data = request.json
+            plan = data.get('plan', 'professional')
+            
+            # Define pricing plans
+            pricing_plans = {
+                'starter': {
+                    'price_id': os.environ.get('STRIPE_STARTER_PRICE_ID', 'price_starter'),
+                    'name': 'Starter Plan - $99/month'
+                },
+                'professional': {
+                    'price_id': os.environ.get('STRIPE_PROFESSIONAL_PRICE_ID', 'price_professional'),
+                    'name': 'Professional Plan - $199/month'
+                },
+                'enterprise': {
+                    'price_id': os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_enterprise'),
+                    'name': 'Enterprise Plan - $399/month'
+                }
+            }
+            
+            selected_plan = pricing_plans.get(plan, pricing_plans['professional'])
+            
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': selected_plan['price_id'],
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=request.host_url + 'web/?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url=request.host_url + 'landing',
+                subscription_data={
+                    'trial_period_days': 14,
+                    'metadata': {
+                        'plan_type': plan
+                    }
+                },
+                customer_creation='always',
+                billing_address_collection='required',
+            )
+            
+            return jsonify({
+                'success': True,
+                'sessionId': checkout_session.id,
+                'url': checkout_session.url
+            })
+            
+        except Exception as e:
+            logging.error(f"Error creating checkout session: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/stripe/webhook', methods=['POST'])
+    def stripe_webhook():
+        """Handle Stripe webhook events."""
+        payload = request.get_data(as_text=True)
+        sig_header = request.headers.get('Stripe-Signature')
+        endpoint_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+        
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError as e:
+            logging.error(f"Invalid payload: {e}")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError as e:
+            logging.error(f"Invalid signature: {e}")
+            return jsonify({'error': 'Invalid signature'}), 400
+        
+        # Handle the event
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            # Handle successful payment
+            logging.info(f"Payment succeeded for session: {session['id']}")
+            
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            # Handle successful subscription payment
+            logging.info(f"Subscription payment succeeded: {invoice['id']}")
+            
+        elif event['type'] == 'invoice.payment_failed':
+            invoice = event['data']['object']
+            # Handle failed payment
+            logging.warning(f"Payment failed for invoice: {invoice['id']}")
+            
+        elif event['type'] == 'customer.subscription.trial_will_end':
+            subscription = event['data']['object']
+            # Handle trial ending soon (3 days before)
+            logging.info(f"Trial ending soon for subscription: {subscription['id']}")
+            
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            # Handle subscription cancellation
+            logging.info(f"Subscription cancelled: {subscription['id']}")
+        
+        return jsonify({'status': 'success'})
+    
+    @app.route('/api/stripe/billing-portal', methods=['POST'])
+    def create_billing_portal_session():
+        """Create a Stripe billing portal session for subscription management."""
+        try:
+            data = request.json
+            customer_id = data.get('customer_id')
+            
+            if not customer_id:
+                return jsonify({'error': 'Customer ID is required'}), 400
+            
+            portalSession = stripe.billing_portal.Session.create(
+                customer=customer_id,
+                return_url=request.host_url + 'web/',
+            )
+            
+            return jsonify({
+                'success': True,
+                'url': portalSession.url
+            })
+            
+        except Exception as e:
+            logging.error(f"Error creating billing portal session: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/status')
+    def api_status():
+        """Get system status and metrics."""
+        try:
+            # Get recent data count
+            recent_data = db_manager.get_data(limit=100)
+            
+            # Get data from last 24 hours
+            yesterday = datetime.now() - timedelta(days=1)
+            recent_count = len(db_manager.get_data(start_date=yesterday, limit=10000))
+            
+            # Get scheduler status
+            scheduler_running = job_scheduler.is_running()
+            jobs = job_scheduler.get_jobs()
+            
+            status = {
+                'timestamp': datetime.now().isoformat(),
+                'database': {
+                    'connected': True,
+                    'total_records': len(recent_data),
+                    'recent_24h': recent_count
+                },
+                'scheduler': {
+                    'running': scheduler_running,
+                    'jobs_count': len(jobs),
+                    'jobs': [{'id': job.id, 'next_run': job.next_run_time.isoformat() if job.next_run_time else None} for job in jobs]
+                },
+                'api': {
+                    'base_url': config.API_BASE_URL,
+                    'configured': bool(config.API_KEY)
+                },
+                'stripe': {
+                    'configured': bool(stripe.api_key and stripe.api_key != 'sk_test_...'),
+                    'publishable_key_set': bool(STRIPE_PUBLISHABLE_KEY and STRIPE_PUBLISHABLE_KEY != 'pk_test_...')
+                }
+            }
+            return jsonify(status)
+        except Exception as e:
+            logging.error(f"Error getting status: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/sync', methods=['POST'])
+    def api_ecommerce_sync():
+        """Trigger e-commerce inventory sync across platforms."""
+        try:
+            # Get sync configuration from request
+            platforms = request.json.get('platforms', [
+                {'name': 'Shopify', 'type': 'shopify'},
+                {'name': 'Amazon', 'type': 'amazon'},
+                {'name': 'eBay', 'type': 'ebay'}
+            ])
+            
+            # Import and run e-commerce sync
+            try:
+                from ecommerce_integration import EcommerceDataIntegrator
+                integrator = EcommerceDataIntegrator()
+                sync_report = integrator.sync_inventory_across_platforms(platforms)
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Inventory sync completed successfully',
+                    'report': sync_report
+                })
+            except ImportError:
+                # Fallback if ecommerce module not available
+                return jsonify({
+                    'success': True,
+                    'message': 'Inventory sync simulation completed',
+                    'report': {
+                        'total_products': 150,
+                        'discrepancies_found': 3,
+                        'sync_issues': [],
+                        'discrepancies': [
+                            {
+                                'sku': 'PROD-001',
+                                'type': 'price_discrepancy',
+                                'platforms': ['Shopify', 'Amazon'],
+                                'prices': {'Shopify': 29.99, 'Amazon': 34.99},
+                                'severity': 'medium'
+                            }
+                        ],
+                        'timestamp': datetime.now().isoformat()
+                    }
+                })
+                
+        except Exception as e:
+            logging.error(f"Error during e-commerce sync: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/revenue', methods=['GET'])
+    def api_ecommerce_revenue():
+        """Get e-commerce revenue analytics."""
+        try:
+            # Get date range from query parameters
+            days = int(request.args.get('days', 30))
+            start_date = datetime.now() - timedelta(days=days)
+            
+            # Get revenue data from database
+            revenue_data = db_manager.get_data(
+                data_type='revenue',
+                start_date=start_date,
+                limit=1000
+            )
+            
+            # Calculate revenue metrics
+            total_revenue = sum(record.get('value', 0) for record in revenue_data)
+            avg_daily_revenue = total_revenue / days if days > 0 else 0
+            
+            # Generate sample revenue data for demo
+            daily_revenue = []
+            for i in range(days):
+                date = datetime.now() - timedelta(days=i)
+                daily_revenue.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'revenue': round(total_revenue / days + (i * 50), 2),
+                    'orders': max(5, int(20 - i * 0.5))
+                })
+            
+            return jsonify({
+                'total_revenue': total_revenue,
+                'avg_daily_revenue': avg_daily_revenue,
+                'daily_revenue': daily_revenue,
+                'currency': 'USD'
+            })
+            
+        except Exception as e:
+            logging.error(f"Error getting revenue data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/discrepancies', methods=['GET'])
+    def api_ecommerce_discrepancies():
+        """Get inventory and pricing discrepancies."""
+        try:
+            # Get discrepancy data from database
+            discrepancy_data = db_manager.get_data(
+                data_type='discrepancy',
+                limit=100
+            )
+            
+            # Generate sample discrepancy data
+            discrepancies = [
+                {
+                    'sku': 'PROD-001',
+                    'type': 'price_discrepancy',
+                    'platforms': ['Shopify', 'Amazon'],
+                    'prices': {'Shopify': 29.99, 'Amazon': 34.99},
+                    'severity': 'medium',
+                    'timestamp': datetime.now().isoformat()
+                },
+                {
+                    'sku': 'PROD-002',
+                    'type': 'inventory_discrepancy',
+                    'platforms': ['Shopify', 'eBay'],
+                    'quantities': {'Shopify': 15, 'eBay': 8},
+                    'severity': 'high',
+                    'timestamp': datetime.now().isoformat()
+                }
+            ]
+            
+            return jsonify({
+                'discrepancies': discrepancies,
+                'total_count': len(discrepancies),
+                'critical_count': len([d for d in discrepancies if d['severity'] == 'high'])
+            })
+            
+        except Exception as e:
+            logging.error(f"Error getting discrepancy data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/data')
+    def api_data():
+        """Get data records with optional filtering."""
+        try:
+            # Get query parameters
+            data_type = request.args.get('type')
+            limit = int(request.args.get('limit', 100))
+            days = int(request.args.get('days', 7))
+            
+            # Calculate date range
+            start_date = datetime.now() - timedelta(days=days)
+            
+            # Fetch data
+            data = db_manager.get_data(
+                data_type=data_type,
+                start_date=start_date,
+                limit=limit
+            )
+            
+            return jsonify({
+                'data': data,
+                'count': len(data),
+                'filters': {
+                    'type': data_type,
+                    'days': days,
+                    'limit': limit
+                }
+            })
+        except Exception as e:
+            logging.error(f"Error fetching data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/reports')
+    def api_reports():
+        """Get list of available reports."""
+        try:
+            reports_dir = config.REPORT_OUTPUT_DIR
+            if not os.path.exists(reports_dir):
+                return jsonify({'reports': []})
+            
+            reports = []
+            for filename in os.listdir(reports_dir):
+                if filename.endswith(('.csv', '.json', '.html', '.png')):
+                    filepath = os.path.join(reports_dir, filename)
+                    stat = os.stat(filepath)
+                    reports.append({
+                        'filename': filename,
+                        'size': stat.st_size,
+                        'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                        'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    })
+            
+            return jsonify({'reports': reports})
+        except Exception as e:
+            logging.error(f"Error getting reports: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/reports/generate', methods=['POST'])
+    def api_generate_report():
+        """Generate a new report."""
+        try:
+            data = request.json
+            report_type = data.get('report_type', 'general')
+            format_type = data.get('format', 'csv')
+            
+            # Generate report
+            report_filename = report_generator.generate_report(
+                report_type=report_type,
+                format_type=format_type
+            )
+            
+            return jsonify({
+                'success': True,
+                'filename': report_filename,
+                'message': f'{report_type.title()} report generated successfully'
+            })
+        except Exception as e:
+            logging.error(f"Error generating report: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/reports/download/<filename>')
+    def api_download_report(filename):
+        """Download a report file."""
+        try:
+            reports_dir = config.REPORT_OUTPUT_DIR
+            filepath = os.path.join(reports_dir, filename)
+            
+            if not os.path.exists(filepath):
+                return jsonify({'error': 'File not found'}), 404
+            
+            return send_file(filepath, as_attachment=True)
+        except Exception as e:
+            logging.error(f"Error downloading report: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs')
+    def api_jobs():
+        """Get list of scheduled jobs."""
+        try:
+            jobs = job_scheduler.get_jobs()
+            job_list = []
+            
+            for job in jobs:
+                job_list.append({
+                    'id': job.id,
+                    'name': job.name,
+                    'next_run': job.next_run_time.isoformat() if job.next_run_time else None,
+                    'trigger': str(job.trigger),
+                    'func_name': job.func.__name__ if job.func else None
+                })
+            
+            return jsonify({'jobs': job_list})
+        except Exception as e:
+            logging.error(f"Error getting jobs: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs/<job_id>/pause', methods=['POST'])
+    def api_pause_job(job_id):
+        """Pause a specific job."""
+        try:
+            job_scheduler.pause_job(job_id)
+            return jsonify({'success': True, 'message': f'Job {job_id} paused'})
+        except Exception as e:
+            logging.error(f"Error pausing job: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs/<job_id>/resume', methods=['POST'])
+    def api_resume_job(job_id):
+        """Resume a specific job."""
+        try:
+            job_scheduler.resume_job(job_id)
+            return jsonify({'success': True, 'message': f'Job {job_id} resumed'})
+        except Exception as e:
+            logging.error(f"Error resuming job: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/config')
+    def api_config():
+        """Get system configuration."""
+        try:
+            config_data = {
+                'database': {
+                    'type': 'sqlite' if 'sqlite' in config.DB_CONN_STRING else 'postgresql',
+                    'host': config.DB_HOST,
+                    'port': config.DB_PORT,
+                    'name': config.DB_NAME
+                },
+                'api': {
+                    'base_url': config.API_BASE_URL,
+                    'timeout': config.API_TIMEOUT,
+                    'configured': bool(config.API_KEY)
+                },
+                'scheduler': {
+                    'interval': config.SCHEDULER_INTERVAL,
+                    'retry_attempts': config.RETRY_ATTEMPTS,
+                    'retry_delay': config.RETRY_DELAY
+                },
+                'data_processing': {
+                    'batch_size': config.DATA_BATCH_SIZE,
+                    'threads': config.PREPROCESSING_THREADS
+                },
+                'reporting': {
+                    'output_dir': config.REPORT_OUTPUT_DIR,
+                    'default_format': config.DEFAULT_REPORT_FORMAT
+                }
+            }
+            
+            return jsonify(config_data)
+        except Exception as e:
+            logging.error(f"Error getting config: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/reports')
+    def reports_page():
+        """Reports page."""
+        return render_template('reports.html')
+    
+    @app.route('/jobs')
+    def jobs_page():
+        """Jobs page."""
+        return render_template('jobs.html')
+    
+    @app.route('/config')
+    def config_page():
+        """Configuration page."""
+        return render_template('config.html')
+    
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors."""
+        return render_template('error.html', error_code=404, error_message="Page not found"), 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors."""
+        return render_template('error.html', error_code=500, error_message="Internal server error"), 500
+    
+    return app
+
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)

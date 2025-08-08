@@ -1,0 +1,430 @@
+﻿"""
+Flask application factory and configuration - SIMPLIFIED VERSION.
+
+This module creates and configures the Flask application for the 
+Data Automation Bot web interface without external dependencies.
+"""
+
+import os
+import logging
+from flask import Flask, render_template, jsonify, request, send_file, send_from_directory, redirect, url_for
+from flask_cors import CORS
+from datetime import datetime, timedelta
+import json
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+def create_app():
+    """Create and configure the Flask application."""
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    
+    # Enable CORS for API endpoints
+    CORS(app)
+    
+    logger.info("✅ Flask application created successfully!")
+    
+    @app.route('/landing')
+    def landing_page():
+        """Landing page for marketing and trial signups."""
+        try:
+            return send_from_directory('.', 'landing_page.html')
+        except Exception as e:
+            logger.error(f"Landing page error: {e}")
+            return "<h1>Landing Page</h1><p>Marketing page will be here</p>"
+    
+    @app.route('/')
+    def index():
+        """Root route - redirect to landing page or dashboard based on context."""
+        return redirect(url_for('dashboard'))
+    
+    @app.route('/web/')
+    def dashboard():
+        """Main dashboard page."""
+        try:
+            logger.info("📊 Serving premium dashboard...")
+            return render_template('dashboard.html')
+        except Exception as e:
+            logger.error(f"Dashboard error: {e}")
+            return jsonify({'error': f'Dashboard error: {str(e)}'}), 500
+    
+    @app.route('/onboarding')
+    def onboarding():
+        """Customer onboarding flow."""
+        try:
+            return render_template('onboarding.html')
+        except Exception as e:
+            logger.error(f"Onboarding error: {e}")
+            return jsonify({'error': f'Onboarding error: {str(e)}'}), 500
+    
+    @app.route('/api/status')
+    def api_status():
+        """Get system status and metrics."""
+        try:
+            status = {
+                'timestamp': datetime.now().isoformat(),
+                'database': {
+                    'connected': True,
+                    'total_records': 1250,
+                    'recent_24h': 45
+                },
+                'scheduler': {
+                    'running': True,
+                    'jobs_count': 5,
+                    'jobs': [
+                        {'id': 'sync_shopify', 'next_run': (datetime.now() + timedelta(minutes=15)).isoformat()},
+                        {'id': 'sync_amazon', 'next_run': (datetime.now() + timedelta(minutes=20)).isoformat()},
+                        {'id': 'sync_ebay', 'next_run': (datetime.now() + timedelta(minutes=25)).isoformat()}
+                    ]
+                },
+                'api': {
+                    'base_url': 'https://api.example.com',
+                    'configured': True
+                },
+                'stripe': {
+                    'configured': True,
+                    'publishable_key_set': True
+                }
+            }
+            return jsonify(status)
+        except Exception as e:
+            logger.error(f"Error getting status: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/sync', methods=['POST'])
+    def api_ecommerce_sync():
+        """Trigger e-commerce inventory sync across platforms."""
+        try:
+            platforms = request.json.get('platforms', [
+                {'name': 'Shopify', 'type': 'shopify'},
+                {'name': 'Amazon', 'type': 'amazon'},
+                {'name': 'eBay', 'type': 'ebay'}
+            ]) if request.json else []
+            
+            # Simulate sync process
+            sync_report = {
+                'success': True,
+                'message': 'Inventory sync completed successfully',
+                'report': {
+                    'total_products': 1247,
+                    'discrepancies_found': 3,
+                    'sync_issues': [],
+                    'discrepancies': [
+                        {
+                            'sku': 'PROD-001',
+                            'type': 'price_discrepancy',
+                            'platforms': ['Shopify', 'Amazon'],
+                            'prices': {'Shopify': 29.99, 'Amazon': 34.99},
+                            'severity': 'medium'
+                        }
+                    ],
+                    'timestamp': datetime.now().isoformat()
+                }
+            }
+            
+            return jsonify(sync_report)
+                
+        except Exception as e:
+            logger.error(f"Error during e-commerce sync: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/revenue', methods=['GET'])
+    def api_ecommerce_revenue():
+        """Get e-commerce revenue analytics."""
+        try:
+            days = int(request.args.get('days', 30))
+            
+            # Generate demo revenue data
+            daily_revenue = []
+            total_revenue = 0
+            
+            for i in range(days):
+                date = datetime.now() - timedelta(days=i)
+                daily_amount = round(2000 + (i * 50) + (abs(hash(str(date.date())) % 1000)), 2)
+                total_revenue += daily_amount
+                daily_revenue.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'revenue': daily_amount,
+                    'orders': max(5, int(20 + i * 0.5))
+                })
+            
+            return jsonify({
+                'total_revenue': round(total_revenue, 2),
+                'avg_daily_revenue': round(total_revenue / days, 2),
+                'daily_revenue': daily_revenue[::-1],  # Reverse to show chronological order
+                'currency': 'USD'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting revenue data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/ecommerce/discrepancies', methods=['GET'])
+    def api_ecommerce_discrepancies():
+        """Get inventory and pricing discrepancies."""
+        try:
+            discrepancies = [
+                {
+                    'sku': 'PROD-001',
+                    'type': 'price_discrepancy',
+                    'platforms': ['Shopify', 'Amazon'],
+                    'prices': {'Shopify': 29.99, 'Amazon': 34.99},
+                    'severity': 'medium',
+                    'timestamp': datetime.now().isoformat()
+                },
+                {
+                    'sku': 'PROD-002',
+                    'type': 'inventory_discrepancy',
+                    'platforms': ['Shopify', 'eBay'],
+                    'quantities': {'Shopify': 15, 'eBay': 8},
+                    'severity': 'high',
+                    'timestamp': datetime.now().isoformat()
+                }
+            ]
+            
+            return jsonify({
+                'discrepancies': discrepancies,
+                'total_count': len(discrepancies),
+                'critical_count': len([d for d in discrepancies if d['severity'] == 'high'])
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting discrepancy data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/data')
+    def api_data():
+        """Get data records with optional filtering."""
+        try:
+            data_type = request.args.get('type')
+            limit = int(request.args.get('limit', 100))
+            days = int(request.args.get('days', 7))
+            
+            # Generate demo data
+            data = []
+            for i in range(min(limit, 50)):
+                data.append({
+                    'id': i,
+                    'type': data_type or 'general',
+                    'value': round(100 + (i * 10), 2),
+                    'timestamp': (datetime.now() - timedelta(hours=i)).isoformat()
+                })
+            
+            return jsonify({
+                'data': data,
+                'count': len(data),
+                'filters': {
+                    'type': data_type,
+                    'days': days,
+                    'limit': limit
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error fetching data: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/reports')
+    def api_reports():
+        """Get list of available reports."""
+        try:
+            # Demo reports
+            reports = [
+                {
+                    'filename': 'daily_report_2025-01-08.csv',
+                    'size': 15240,
+                    'created': datetime.now().isoformat(),
+                    'modified': datetime.now().isoformat()
+                },
+                {
+                    'filename': 'inventory_summary.html',
+                    'size': 8950,
+                    'created': (datetime.now() - timedelta(hours=2)).isoformat(),
+                    'modified': (datetime.now() - timedelta(hours=2)).isoformat()
+                }
+            ]
+            
+            return jsonify({'reports': reports})
+        except Exception as e:
+            logger.error(f"Error getting reports: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/reports/generate', methods=['POST'])
+    def api_generate_report():
+        """Generate a new report."""
+        try:
+            data = request.json or {}
+            report_type = data.get('report_type', 'general')
+            format_type = data.get('format', 'csv')
+            
+            report_filename = f'{report_type}_report_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.{format_type}'
+            
+            return jsonify({
+                'success': True,
+                'filename': report_filename,
+                'message': f'{report_type.title()} report generated successfully'
+            })
+        except Exception as e:
+            logger.error(f"Error generating report: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs')
+    def api_jobs():
+        """Get list of scheduled jobs."""
+        try:
+            jobs = [
+                {
+                    'id': 'shopify_sync',
+                    'name': 'Shopify Sync',
+                    'next_run': (datetime.now() + timedelta(minutes=15)).isoformat(),
+                    'trigger': 'interval[0:15:00]',
+                    'func_name': 'sync_shopify_inventory'
+                },
+                {
+                    'id': 'amazon_sync',
+                    'name': 'Amazon Sync',
+                    'next_run': (datetime.now() + timedelta(minutes=30)).isoformat(),
+                    'trigger': 'interval[0:30:00]',
+                    'func_name': 'sync_amazon_inventory'
+                },
+                {
+                    'id': 'report_generation',
+                    'name': 'Daily Reports',
+                    'next_run': (datetime.now() + timedelta(hours=24)).isoformat(),
+                    'trigger': 'cron[hour=9]',
+                    'func_name': 'generate_daily_reports'
+                }
+            ]
+            
+            return jsonify({'jobs': jobs})
+        except Exception as e:
+            logger.error(f"Error getting jobs: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs/<job_id>/pause', methods=['POST'])
+    def api_pause_job(job_id):
+        """Pause a specific job."""
+        try:
+            logger.info(f"Pausing job: {job_id}")
+            return jsonify({'success': True, 'message': f'Job {job_id} paused'})
+        except Exception as e:
+            logger.error(f"Error pausing job: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/jobs/<job_id>/resume', methods=['POST'])
+    def api_resume_job(job_id):
+        """Resume a specific job."""
+        try:
+            logger.info(f"Resuming job: {job_id}")
+            return jsonify({'success': True, 'message': f'Job {job_id} resumed'})
+        except Exception as e:
+            logger.error(f"Error resuming job: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/config')
+    def api_config():
+        """Get system configuration."""
+        try:
+            config_data = {
+                'database': {
+                    'type': 'sqlite',
+                    'host': 'localhost',
+                    'port': '5432',
+                    'name': 'data_automation'
+                },
+                'api': {
+                    'base_url': 'https://api.example.com',
+                    'timeout': 30,
+                    'configured': True
+                },
+                'scheduler': {
+                    'interval': 900,
+                    'retry_attempts': 3,
+                    'retry_delay': 60
+                },
+                'data_processing': {
+                    'batch_size': 1000,
+                    'threads': 4
+                },
+                'reporting': {
+                    'output_dir': './reports',
+                    'default_format': 'csv'
+                }
+            }
+            
+            return jsonify(config_data)
+        except Exception as e:
+            logger.error(f"Error getting config: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/reports')
+    def reports_page():
+        """Reports page."""
+        try:
+            return render_template('reports.html')
+        except Exception as e:
+            logger.error(f"Reports page error: {e}")
+            return jsonify({'error': f'Reports page error: {str(e)}'}), 500
+    
+    @app.route('/jobs')
+    def jobs_page():
+        """Jobs page."""
+        try:
+            return render_template('jobs.html')
+        except Exception as e:
+            logger.error(f"Jobs page error: {e}")
+            return jsonify({'error': f'Jobs page error: {str(e)}'}), 500
+    
+    @app.route('/config')
+    def config_page():
+        """Configuration page."""
+        try:
+            return render_template('config.html')
+        except Exception as e:
+            logger.error(f"Config page error: {e}")
+            return jsonify({'error': f'Config page error: {str(e)}'}), 500
+    
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors."""
+        try:
+            return render_template('error.html', error_code=404, error_message="Page not found"), 404
+        except Exception:
+            return """
+            <h1>404 - Page Not Found</h1>
+            <p>The page you're looking for doesn't exist.</p>
+            <a href="/web/">Go to Dashboard</a>
+            """, 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors."""
+        try:
+            return render_template('error.html', error_code=500, error_message="Internal server error"), 500
+        except Exception:
+            return """
+            <h1>500 - Internal Server Error</h1>
+            <p>Something went wrong on our end.</p>
+            <a href="/web/">Go to Dashboard</a>
+            """, 500
+    
+    @app.before_first_request
+    def startup_message():
+        """Log startup message."""
+        logger.info("🎉 Premium E-commerce Dashboard initialized successfully!")
+        logger.info("📊 Dashboard available at: /web/")
+        logger.info("⚙️  Configuration page: /config")
+        logger.info("📈 Reports page: /reports") 
+        logger.info("🔧 Jobs page: /jobs")
+    
+    return app
+
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)

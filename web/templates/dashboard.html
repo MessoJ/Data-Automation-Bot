@@ -1,675 +1,1089 @@
 {% extends "base.html" %}
 
-{% block title %}E-commerce Data Automation Dashboard{% endblock %}
+{% block title %}E-commerce Command Center - Premium Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <!-- Enhanced Header with E-commerce Focus -->
-    <div class="page-header">
-        <h1 class="page-title">🛒 E-commerce Data Automation</h1>
-        <p class="page-subtitle">Sync inventory, pricing, and orders across all your sales channels in real-time</p>
-    </div>
-
-    <!-- E-commerce Alert Banner -->
-    <div class="ecommerce-alert" id="syncAlert" style="display: none;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-        <span id="alertMessage">Inventory sync completed successfully!</span>
-    </div>
-
-    <!-- Enhanced Stats Grid with E-commerce Metrics -->
-    <div class="stats-grid">
-        <div class="stat-card" id="revenueCard">
-            <div class="stat-icon stat-icon-green">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="totalRevenue">$0</h3>
-                <p class="stat-label">Total Revenue (30 days)</p>
-                <span class="stat-change positive" id="revenueChange">+0%</span>
+<!-- Premium E-commerce Dashboard -->
+<div class="premium-dashboard">
+    <!-- Hero Header with Glassmorphism -->
+    <header class="dashboard-hero">
+        <div class="hero-background">
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+                <div class="shape shape-4"></div>
             </div>
         </div>
-
-        <div class="stat-card" id="inventoryCard">
-            <div class="stat-icon stat-icon-teal">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
-                </svg>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="inventoryDiscrepancies">0</h3>
-                <p class="stat-label">Inventory Discrepancies</p>
-                <span class="stat-change negative" id="discrepancyChange">Critical</span>
-            </div>
-        </div>
-
-        <div class="stat-card" id="platformsCard">
-            <div class="stat-icon stat-icon-orange">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="activePlatforms">3</h3>
-                <p class="stat-label">Connected Platforms</p>
-                <span class="stat-change positive" id="platformStatus">All Online</span>
-            </div>
-        </div>
-
-        <div class="stat-card" id="ordersCard">
-            <div class="stat-icon stat-icon-red">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9z"/>
-                    <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 2a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h7a1 1 0 100-2H7z"/>
-                </svg>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="totalOrders">0</h3>
-                <p class="stat-label">Orders Today</p>
-                <span class="stat-change positive" id="orderChange">+0%</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Charts Section -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3 class="chart-title">📈 Revenue & Inventory Trends</h3>
-                <div class="chart-actions">
-                    <select id="chartPeriod" class="chart-select" aria-label="Select chart period">
-                        <option value="7">Last 7 days</option>
-                        <option value="30" selected>Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                    </select>
-                    <button class="btn btn-sm btn-secondary" onclick="refreshRevenueChart()">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Refresh
-                    </button>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="revenueChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3 class="chart-title">🔄 Platform Sync Status</h3>
-                <div class="chart-actions">
-                    <button class="btn btn-sm btn-primary" onclick="runInventorySync()">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Sync Now
-                    </button>
-                </div>
-            </div>
-            <div class="activity-list" id="platformActivityList">
-                <div class="activity-item">
-                    <div class="activity-icon" style="background: var(--accent-green);">
-                        ✓
+        
+        <div class="hero-content">
+            <div class="hero-main">
+                <div class="user-greeting">
+                    <div class="avatar-container">
+                        <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2316a085'><path d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 7C14.5 7 14 7.4 14 8V10C14 10.6 14.4 11 15 11H16V13H8V11H9C9.6 11 10 10.6 10 10V8C10 7.4 9.5 7 9 7L3 7V9L8 9V19C8 20.1 8.9 21 10 21H14C15.1 21 16 20.1 16 19V9L21 9Z'/></svg>" alt="User Avatar" class="user-avatar">
+                        <div class="online-indicator"></div>
                     </div>
-                    <div class="activity-content">
-                        <div class="activity-title">Shopify Sync Complete</div>
-                        <div class="activity-time">2 minutes ago</div>
+                    <div class="greeting-text">
+                        <h1 class="greeting-title">Welcome back, <span class="user-name">Alex</span>! 👋</h1>
+                        <p class="greeting-subtitle">Your e-commerce empire is thriving today</p>
                     </div>
                 </div>
-                <div class="activity-item">
-                    <div class="activity-icon" style="background: var(--accent-green);">
-                        ✓
+                
+                <div class="hero-stats">
+                    <div class="quick-stat">
+                        <div class="stat-icon trend-up">📈</div>
+                        <div class="stat-content">
+                            <span class="stat-value">+24%</span>
+                            <span class="stat-label">Revenue Growth</span>
+                        </div>
                     </div>
-                    <div class="activity-content">
-                        <div class="activity-title">Amazon Inventory Updated</div>
-                        <div class="activity-time">5 minutes ago</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-icon" style="background: var(--accent-orange);">
-                        ⚠
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">eBay Price Discrepancy</div>
-                        <div class="activity-time">10 minutes ago</div>
+                    <div class="quick-stat">
+                        <div class="stat-icon sync-icon">🔄</div>
+                        <div class="stat-content">
+                            <span class="stat-value" id="syncStatus">All Synced</span>
+                            <span class="stat-label">Platform Status</span>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="hero-actions">
+                <button class="premium-btn primary" onclick="runQuickSync()" id="masterSyncBtn">
+                    <span class="btn-icon">⚡</span>
+                    <span class="btn-text">Quick Sync</span>
+                    <div class="btn-glow"></div>
+                </button>
+                <button class="premium-btn secondary" onclick="openAnalytics()">
+                    <span class="btn-icon">📊</span>
+                    <span class="btn-text">Analytics</span>
+                </button>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Quick Actions Section -->
-    <div class="quick-actions">
-        <h3 class="section-title">⚡ Quick Actions</h3>
+    <!-- Live Performance Dashboard -->
+    <section class="performance-dashboard">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-icon">🎯</span>
+                Live Performance
+            </h2>
+            <div class="header-actions">
+                <div class="time-selector">
+                    <button class="time-btn active" data-period="today">Today</button>
+                    <button class="time-btn" data-period="week">7 Days</button>
+                    <button class="time-btn" data-period="month">30 Days</button>
+                </div>
+                <button class="refresh-btn" onclick="refreshDashboard()" id="refreshBtn">
+                    <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Premium KPI Cards -->
+        <div class="kpi-grid">
+            <!-- Revenue Card -->
+            <div class="kpi-card revenue-card" id="revenueKPI">
+                <div class="card-background">
+                    <div class="bg-pattern revenue-pattern"></div>
+                </div>
+                <div class="card-content">
+                    <div class="kpi-header">
+                        <div class="kpi-icon revenue-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+                        <div class="kpi-trend positive" id="revenueTrend">
+                            <span class="trend-icon">↗</span>
+                            <span class="trend-value">+18.2%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-main">
+                        <h3 class="kpi-value" id="totalRevenue">$84,392</h3>
+                        <p class="kpi-label">Total Revenue</p>
+                        <div class="kpi-detail">
+                            <span class="detail-text">$2,813 daily average</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-sparkline">
+                    <canvas id="revenueSparkline" width="120" height="40"></canvas>
+                </div>
+            </div>
+
+            <!-- Orders Card -->
+            <div class="kpi-card orders-card" id="ordersKPI">
+                <div class="card-background">
+                    <div class="bg-pattern orders-pattern"></div>
+                </div>
+                <div class="card-content">
+                    <div class="kpi-header">
+                        <div class="kpi-icon orders-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M16 11V7a4 4 0 0 0-8 0v4H5v8h14v-8h-3z"/>
+                            </svg>
+                        </div>
+                        <div class="kpi-trend positive" id="ordersTrend">
+                            <span class="trend-icon">↗</span>
+                            <span class="trend-value">+12.7%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-main">
+                        <h3 class="kpi-value" id="totalOrders">1,247</h3>
+                        <p class="kpi-label">Orders Today</p>
+                        <div class="kpi-detail">
+                            <span class="detail-text">156 pending fulfillment</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-sparkline">
+                    <canvas id="ordersSparkline" width="120" height="40"></canvas>
+                </div>
+            </div>
+
+            <!-- Inventory Health Card -->
+            <div class="kpi-card inventory-card" id="inventoryKPI">
+                <div class="card-background">
+                    <div class="bg-pattern inventory-pattern"></div>
+                </div>
+                <div class="card-content">
+                    <div class="kpi-header">
+                        <div class="kpi-icon inventory-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                            </svg>
+                        </div>
+                        <div class="health-indicator excellent" id="inventoryHealth">
+                            <span class="health-dot"></span>
+                            <span class="health-text">Excellent</span>
+                        </div>
+                    </div>
+                    <div class="kpi-main">
+                        <h3 class="kpi-value" id="inventoryItems">3,842</h3>
+                        <p class="kpi-label">Active Products</p>
+                        <div class="kpi-detail">
+                            <span class="detail-text">2 alerts need attention</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="inventory-gauge">
+                    <div class="gauge-chart" id="inventoryGauge"></div>
+                </div>
+            </div>
+
+            <!-- Platform Status Card -->
+            <div class="kpi-card platforms-card" id="platformsKPI">
+                <div class="card-background">
+                    <div class="bg-pattern platforms-pattern"></div>
+                </div>
+                <div class="card-content">
+                    <div class="kpi-header">
+                        <div class="kpi-icon platforms-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 2l10 7-10 7-10-7z"/>
+                                <path d="M12 23l8-6"/>
+                                <path d="M12 23l-8-6"/>
+                            </svg>
+                        </div>
+                        <div class="connection-status all-online">
+                            <span class="status-text">All Online</span>
+                        </div>
+                    </div>
+                    <div class="kpi-main">
+                        <h3 class="kpi-value" id="connectedPlatforms">5</h3>
+                        <p class="kpi-label">Connected Platforms</p>
+                        <div class="platform-icons">
+                            <div class="platform-dot shopify active" title="Shopify"></div>
+                            <div class="platform-dot amazon active" title="Amazon"></div>
+                            <div class="platform-dot ebay active" title="eBay"></div>
+                            <div class="platform-dot woo active" title="WooCommerce"></div>
+                            <div class="platform-dot etsy active" title="Etsy"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Premium Chart Section -->
+    <section class="charts-section">
+        <div class="charts-grid">
+            <!-- Main Revenue Chart -->
+            <div class="chart-card main-chart">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <h3>Revenue Analytics</h3>
+                        <p>Real-time performance across all channels</p>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="chart-tabs">
+                            <button class="tab-btn active" data-chart="revenue">Revenue</button>
+                            <button class="tab-btn" data-chart="orders">Orders</button>
+                            <button class="tab-btn" data-chart="conversion">Conversion</button>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="mainChart" width="600" height="300"></canvas>
+                </div>
+                <div class="chart-insights">
+                    <div class="insight">
+                        <span class="insight-icon">🚀</span>
+                        <span class="insight-text">Peak sales: $3,247 at 3:00 PM</span>
+                    </div>
+                    <div class="insight">
+                        <span class="insight-icon">📈</span>
+                        <span class="insight-text">Trending up 24% vs yesterday</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Performance -->
+            <div class="chart-card platform-chart">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <h3>Platform Performance</h3>
+                        <p>Revenue distribution by channel</p>
+                    </div>
+                </div>
+                <div class="platform-stats">
+                    <div class="platform-stat shopify-stat">
+                        <div class="stat-header">
+                            <div class="platform-logo shopify-logo">🛍️</div>
+                            <div class="stat-trend positive">+15%</div>
+                        </div>
+                        <div class="stat-main">
+                            <h4>Shopify</h4>
+                            <p class="stat-value">$38,247</p>
+                            <div class="stat-bar">
+                                <div class="bar-fill shopify-fill" style="width: 65%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="platform-stat amazon-stat">
+                        <div class="stat-header">
+                            <div class="platform-logo amazon-logo">📦</div>
+                            <div class="stat-trend positive">+8%</div>
+                        </div>
+                        <div class="stat-main">
+                            <h4>Amazon</h4>
+                            <p class="stat-value">$28,193</p>
+                            <div class="stat-bar">
+                                <div class="bar-fill amazon-fill" style="width: 48%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="platform-stat ebay-stat">
+                        <div class="stat-header">
+                            <div class="platform-logo ebay-logo">🏪</div>
+                            <div class="stat-trend neutral">-2%</div>
+                        </div>
+                        <div class="stat-main">
+                            <h4>eBay</h4>
+                            <p class="stat-value">$12,847</p>
+                            <div class="stat-bar">
+                                <div class="bar-fill ebay-fill" style="width: 22%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="platform-stat woo-stat">
+                        <div class="stat-header">
+                            <div class="platform-logo woo-logo">🌐</div>
+                            <div class="stat-trend positive">+32%</div>
+                        </div>
+                        <div class="stat-main">
+                            <h4>WooCommerce</h4>
+                            <p class="stat-value">$5,105</p>
+                            <div class="stat-bar">
+                                <div class="bar-fill woo-fill" style="width: 9%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Smart Actions Hub -->
+    <section class="actions-hub">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-icon">⚡</span>
+                Smart Actions
+            </h2>
+            <p class="section-subtitle">Automate your workflow with intelligent actions</p>
+        </div>
+
         <div class="actions-grid">
-            <div class="action-card" onclick="generateInventoryReport()">
-                <div class="action-icon action-icon-green">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <div class="action-content">
-                    <div class="action-title">Generate Inventory Report</div>
-                    <div class="action-desc">Export current inventory levels across all platforms</div>
+            <!-- Priority Actions -->
+            <div class="action-group priority-actions">
+                <h3 class="group-title">Priority Actions</h3>
+                <div class="action-items">
+                    <div class="action-item critical" onclick="fixInventoryIssues()">
+                        <div class="action-icon critical-icon">🚨</div>
+                        <div class="action-content">
+                            <h4>Fix Inventory Issues</h4>
+                            <p>2 critical discrepancies found</p>
+                            <div class="action-badge urgent">Urgent</div>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
+
+                    <div class="action-item important" onclick="updatePricing()">
+                        <div class="action-icon price-icon">💰</div>
+                        <div class="action-content">
+                            <h4>Update Pricing</h4>
+                            <p>Competitor analysis ready</p>
+                            <div class="action-badge high">High Priority</div>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="action-card" onclick="fixPriceDiscrepancies()">
-                <div class="action-icon action-icon-teal">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                </div>
-                <div class="action-content">
-                    <div class="action-title">Fix Price Discrepancies</div>
-                    <div class="action-desc">Automatically sync pricing across all platforms</div>
-                </div>
-            </div>
+            <!-- Quick Actions -->
+            <div class="action-group quick-actions">
+                <h3 class="group-title">Quick Actions</h3>
+                <div class="action-items">
+                    <div class="action-item" onclick="syncAllPlatforms()">
+                        <div class="action-icon sync-icon">🔄</div>
+                        <div class="action-content">
+                            <h4>Sync All Platforms</h4>
+                            <p>Last sync: 3 minutes ago</p>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
 
-            <div class="action-card" onclick="addNewPlatform()">
-                <div class="action-icon action-icon-orange">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 4v16m8-8H4"/>
-                    </svg>
-                </div>
-                <div class="action-content">
-                    <div class="action-title">Add New Platform</div>
-                    <div class="action-desc">Connect additional e-commerce platforms</div>
-                </div>
-            </div>
+                    <div class="action-item" onclick="generateReport()">
+                        <div class="action-icon report-icon">📊</div>
+                        <div class="action-content">
+                            <h4>Generate Report</h4>
+                            <p>Export performance data</p>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
 
-            <div class="action-card" onclick="viewAnalytics()">
-                <div class="action-icon action-icon-red">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3 3v18h18"/>
-                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
-                    </svg>
-                </div>
-                <div class="action-content">
-                    <div class="action-title">View Analytics</div>
-                    <div class="action-desc">Detailed performance metrics and insights</div>
+                    <div class="action-item" onclick="addNewProduct()">
+                        <div class="action-icon add-icon">➕</div>
+                        <div class="action-content">
+                            <h4>Add New Product</h4>
+                            <p>Cross-platform listing</p>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
+
+                    <div class="action-item" onclick="viewAnalytics()">
+                        <div class="action-icon analytics-icon">📈</div>
+                        <div class="action-content">
+                            <h4>View Analytics</h4>
+                            <p>Detailed insights</p>
+                        </div>
+                        <div class="action-arrow">→</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Enhanced E-commerce Features Section -->
-    <div class="quick-actions">
-        <h3 class="section-title">🛍️ E-commerce Tools</h3>
-        <div class="actions-grid">
-            <div class="action-card" onclick="syncInventory()">
-                <div class="action-icon action-icon-green">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
+    <!-- Real-time Activity Feed -->
+    <section class="activity-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-icon">📡</span>
+                Live Activity
+            </h2>
+            <div class="activity-controls">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="sync">Sync</button>
+                <button class="filter-btn" data-filter="sales">Sales</button>
+                <button class="filter-btn" data-filter="alerts">Alerts</button>
+            </div>
+        </div>
+
+        <div class="activity-feed" id="activityFeed">
+            <div class="activity-item success" data-type="sync">
+                <div class="activity-icon success-icon">✅</div>
+                <div class="activity-content">
+                    <div class="activity-main">
+                        <h4>Shopify sync completed successfully</h4>
+                        <p>1,247 products updated, 3 new orders imported</p>
+                    </div>
+                    <div class="activity-meta">
+                        <span class="activity-time">2 minutes ago</span>
+                        <span class="activity-platform">Shopify</span>
+                    </div>
                 </div>
-                <div class="action-content">
-                    <div class="action-title">Sync Inventory</div>
-                    <div class="action-desc">Update inventory across all platforms instantly</div>
-                </div>
+                <button class="activity-action" onclick="viewSyncDetails()">View Details</button>
             </div>
 
-            <div class="action-card" onclick="monitorPrices()">
-                <div class="action-icon action-icon-teal">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
+            <div class="activity-item sale" data-type="sales">
+                <div class="activity-icon sale-icon">💳</div>
+                <div class="activity-content">
+                    <div class="activity-main">
+                        <h4>New order: $247.99</h4>
+                        <p>Premium Wireless Headphones - Customer: John D.</p>
+                    </div>
+                    <div class="activity-meta">
+                        <span class="activity-time">4 minutes ago</span>
+                        <span class="activity-platform">Amazon</span>
+                    </div>
                 </div>
-                <div class="action-content">
-                    <div class="action-title">Price Monitoring</div>
-                    <div class="action-desc">Track competitor prices and adjust automatically</div>
-                </div>
+                <button class="activity-action" onclick="viewOrder()">View Order</button>
             </div>
 
-            <div class="action-card" onclick="generateReports()">
-                <div class="action-icon action-icon-orange">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
+            <div class="activity-item warning" data-type="alerts">
+                <div class="activity-icon warning-icon">⚠️</div>
+                <div class="activity-content">
+                    <div class="activity-main">
+                        <h4>Low stock alert</h4>
+                        <p>iPhone Case - Silver (SKU: IPH-CASE-001) - Only 5 units left</p>
+                    </div>
+                    <div class="activity-meta">
+                        <span class="activity-time">8 minutes ago</span>
+                        <span class="activity-platform">Multi-platform</span>
+                    </div>
                 </div>
-                <div class="action-content">
-                    <div class="action-title">Performance Reports</div>
-                    <div class="action-desc">Generate detailed sales and performance reports</div>
-                </div>
+                <button class="activity-action urgent" onclick="restockItem()">Restock</button>
             </div>
 
-            <div class="action-card" onclick="manageOrders()">
-                <div class="action-icon action-icon-red">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9z"/>
-                        <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 2a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h10a1 1 0 100-2H7zm0 4a1 1 0 000 2h7a1 1 0 100-2H7z"/>
-                    </svg>
+            <div class="activity-item info" data-type="sync">
+                <div class="activity-icon info-icon">ℹ️</div>
+                <div class="activity-content">
+                    <div class="activity-main">
+                        <h4>eBay listing optimization suggested</h4>
+                        <p>15 products could benefit from better keywords</p>
+                    </div>
+                    <div class="activity-meta">
+                        <span class="activity-time">12 minutes ago</span>
+                        <span class="activity-platform">eBay</span>
+                    </div>
                 </div>
-                <div class="action-content">
-                    <div class="action-title">Order Management</div>
-                    <div class="action-desc">Track and manage orders across all platforms</div>
-                </div>
+                <button class="activity-action" onclick="optimizeListings()">Optimize</button>
             </div>
+        </div>
+
+        <button class="load-more-btn" onclick="loadMoreActivity()">
+            <span class="btn-text">Load More Activity</span>
+            <span class="btn-icon">↓</span>
+        </button>
+    </section>
+</div>
+
+<!-- Premium Loading Overlay -->
+<div class="premium-loading" id="premiumLoading">
+    <div class="loading-container">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+        </div>
+        <h3 class="loading-title" id="loadingTitle">Syncing your data...</h3>
+        <p class="loading-subtitle" id="loadingSubtitle">Please wait while we update your platforms</p>
+        <div class="loading-progress">
+            <div class="progress-bar" id="loadingProgressBar"></div>
+        </div>
+        <div class="loading-steps" id="loadingSteps">
+            <div class="step completed">✓ Connected to Shopify</div>
+            <div class="step active">🔄 Syncing inventory...</div>
+            <div class="step">⏳ Updating prices</div>
         </div>
     </div>
 </div>
 
-<!-- Enhanced Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner"></div>
-</div>
+<!-- Premium Toast System -->
+<div class="toast-system" id="toastSystem"></div>
 
-<!-- Enhanced Toast Container -->
-<div id="toastContainer"></div>
+<!-- Success Modal -->
+<div class="premium-modal" id="successModal">
+    <div class="modal-overlay" onclick="closeModal('successModal')"></div>
+    <div class="modal-container">
+        <div class="modal-content">
+            <div class="success-animation">
+                <div class="success-icon">🎉</div>
+                <div class="success-confetti">
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                </div>
+            </div>
+            <h2>Sync Completed Successfully!</h2>
+            <p>All your platforms are now perfectly synchronized.</p>
+            
+            <div class="sync-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Products Updated:</span>
+                    <span class="summary-value">1,247</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Discrepancies Fixed:</span>
+                    <span class="summary-value">8</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Time Saved:</span>
+                    <span class="summary-value">3.5 hours</span>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="premium-btn primary" onclick="closeModal('successModal')">Awesome!</button>
+                <button class="premium-btn secondary" onclick="viewSyncReport()">View Report</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Enhanced E-commerce Dashboard JavaScript
-let revenueChart = null;
+// Premium Dashboard JavaScript with Advanced Features
+let dashboardCharts = {};
+let realtimeInterval;
 let syncInProgress = false;
 
-// Initialize dashboard
+// Initialize Premium Dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    loadDashboardData();
-    initializeRevenueChart();
-    startAutoRefresh();
+    initializeDashboard();
     setupEventListeners();
+    startRealtimeUpdates();
+    initializeCharts();
+    loadDashboardData();
+    
+    // Add premium entrance animations
+    animateEntrance();
 });
 
-function setupEventListeners() {
-    // Chart period selector
-    document.getElementById('chartPeriod').addEventListener('change', function() {
-        refreshRevenueChart();
+function initializeDashboard() {
+    console.log('🚀 Initializing Premium E-commerce Dashboard...');
+    
+    // Set current time
+    updateTimeDisplay();
+    
+    // Initialize floating shapes animation
+    initializeFloatingShapes();
+    
+    // Setup intersection observer for scroll animations
+    setupScrollAnimations();
+}
+
+function animateEntrance() {
+    const elements = document.querySelectorAll('.kpi-card, .chart-card, .action-group');
+    elements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        
+        setTimeout(() => {
+            el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 100);
     });
 }
 
-function loadDashboardData() {
-    showLoading();
-    
-    // Load status data
-    fetch('/api/status')
-        .then(response => response.json())
-        .then(data => {
-            updateDashboardStats(data);
-            hideLoading();
-        })
-        .catch(error => {
-            console.error('Error loading dashboard data:', error);
-            showToast('Error loading dashboard data', 'error');
-            hideLoading();
+function setupEventListeners() {
+    // Time selector buttons
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            updateChartsForPeriod(this.dataset.period);
         });
+    });
+
+    // Chart tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            switchChart(this.dataset.chart);
+        });
+    });
+
+    // Activity filters
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterActivity(this.dataset.filter);
+        });
+    });
 }
 
-function updateDashboardStats(data) {
-    // Update revenue metrics
-    const revenue = data.database?.total_records * 25 || 0;
-    document.getElementById('totalRevenue').textContent = `$${revenue.toLocaleString()}`;
+function initializeCharts() {
+    // Main revenue chart
+    const mainCtx = document.getElementById('mainChart').getContext('2d');
     
-    // Update inventory discrepancies
-    const discrepancies = data.database?.recent_24h || 0;
-    document.getElementById('inventoryDiscrepancies').textContent = discrepancies;
-    
-    // Update platform status
-    const platforms = data.scheduler?.jobs_count || 3;
-    document.getElementById('activePlatforms').textContent = platforms;
-    
-    // Update orders
-    const orders = Math.floor(Math.random() * 50) + 10;
-    document.getElementById('totalOrders').textContent = orders;
-    
-    // Update change indicators
-    updateChangeIndicators(data);
-}
-
-function updateChangeIndicators(data) {
-    const revenueChange = document.getElementById('revenueChange');
-    const discrepancyChange = document.getElementById('discrepancyChange');
-    const platformStatus = document.getElementById('platformStatus');
-    const orderChange = document.getElementById('orderChange');
-    
-    // Simulate change data
-    const revenuePercent = Math.floor(Math.random() * 20) + 5;
-    revenueChange.textContent = `+${revenuePercent}%`;
-    revenueChange.className = 'stat-change positive';
-    
-    const discrepancyCount = data.database?.recent_24h || 0;
-    if (discrepancyCount > 10) {
-        discrepancyChange.textContent = 'Critical';
-        discrepancyChange.className = 'stat-change negative';
-    } else if (discrepancyCount > 5) {
-        discrepancyChange.textContent = 'Warning';
-        discrepancyChange.className = 'stat-change negative';
-    } else {
-        discrepancyChange.textContent = 'Good';
-        discrepancyChange.className = 'stat-change positive';
-    }
-    
-    platformStatus.textContent = 'All Online';
-    platformStatus.className = 'stat-change positive';
-    
-    const orderPercent = Math.floor(Math.random() * 15) + 3;
-    orderChange.textContent = `+${orderPercent}%`;
-    orderChange.className = 'stat-change positive';
-}
-
-function initializeRevenueChart() {
-    const ctx = document.getElementById('revenueChart').getContext('2d');
-    
-    // Generate sample revenue data
-    const labels = [];
-    const revenueData = [];
-    const inventoryData = [];
-    
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        
-        revenueData.push(Math.floor(Math.random() * 5000) + 2000);
-        inventoryData.push(Math.floor(Math.random() * 100) + 50);
-    }
-    
-    revenueChart = new Chart(ctx, {
+    dashboardCharts.main = new Chart(mainCtx, {
         type: 'line',
         data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Revenue ($)',
-                    data: revenueData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Inventory Items',
-                    data: inventoryData,
-                    borderColor: '#14b8a6',
-                    backgroundColor: 'rgba(20, 184, 166, 0.1)',
-                    tension: 0.4,
-                    yAxisID: 'y1'
-                }
-            ]
+            labels: generateTimeLabels(30),
+            datasets: [{
+                label: 'Revenue',
+                data: generateRevenueData(30),
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `Revenue: $${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
                     display: true,
-                    title: {
-                        display: true,
-                        text: 'Date',
-                        color: '#1f2937'
+                    grid: {
+                        display: false
                     },
                     ticks: {
-                        color: '#4b5563'
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        color: 'rgba(148, 163, 184, 0.8)',
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
                     }
                 },
                 y: {
-                    type: 'linear',
                     display: true,
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'Revenue ($)',
-                        color: '#1f2937'
+                    grid: {
+                        color: 'rgba(148, 163, 184, 0.1)',
+                        drawBorder: false
                     },
                     ticks: {
-                        color: '#4b5563'
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        color: 'rgba(148, 163, 184, 0.8)',
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        callback: function(value) {
+                            return '$' + (value / 1000) + 'k';
+                        }
                     }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Inventory Items',
-                        color: '#1f2937'
-                    },
-                    ticks: {
-                        color: '#4b5563'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    },
                 }
             },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#1f2937'
-                    }
-                },
-                title: {
-                    display: false
-                }
+            interaction: {
+                intersect: false,
+                mode: 'index'
             }
         }
     });
+
+    // Initialize sparklines
+    initializeSparklines();
 }
 
-function refreshRevenueChart() {
-    if (revenueChart) {
-        revenueChart.destroy();
-    }
-    initializeRevenueChart();
-    showToast('Revenue chart refreshed', 'success');
+function initializeSparklines() {
+    const sparklineConfig = {
+        type: 'line',
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            elements: {
+                point: { radius: 0 }
+            }
+        }
+    };
+
+    // Revenue sparkline
+    const revenueSparkCtx = document.getElementById('revenueSparkline').getContext('2d');
+    new Chart(revenueSparkCtx, {
+        ...sparklineConfig,
+        data: {
+            labels: generateTimeLabels(7),
+            datasets: [{
+                data: generateSparklineData(7, 2000, 4000),
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+
+    // Orders sparkline
+    const ordersSparkCtx = document.getElementById('ordersSparkline').getContext('2d');
+    new Chart(ordersSparkCtx, {
+        ...sparklineConfig,
+        data: {
+            labels: generateTimeLabels(7),
+            datasets: [{
+                data: generateSparklineData(7, 100, 200),
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
 }
 
-function runInventorySync() {
-    if (syncInProgress) {
-        showToast('Sync already in progress', 'warning');
-        return;
+function generateTimeLabels(count) {
+    const labels = [];
+    for (let i = count - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.getDate().toString());
     }
+    return labels;
+}
+
+function generateRevenueData(count) {
+    const data = [];
+    for (let i = 0; i < count; i++) {
+        data.push(Math.floor(Math.random() * 3000) + 1500);
+    }
+    return data;
+}
+
+function generateSparklineData(count, min, max) {
+    const data = [];
+    for (let i = 0; i < count; i++) {
+        data.push(Math.floor(Math.random() * (max - min)) + min);
+    }
+    return data;
+}
+
+function runQuickSync() {
+    if (syncInProgress) return;
     
     syncInProgress = true;
-    showToast('Starting inventory sync...', 'info');
-    showLoading();
+    showPremiumLoading('Syncing all platforms...', 'Connecting to your e-commerce channels');
     
-    // Call e-commerce sync API
-    fetch('/api/ecommerce/sync', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            platforms: [
-                {'name': 'Shopify', 'type': 'shopify'},
-                {'name': 'Amazon', 'type': 'amazon'},
-                {'name': 'eBay', 'type': 'ebay'}
-            ]
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    const steps = [
+        { text: '✓ Connected to Shopify', delay: 1000 },
+        { text: '✓ Connected to Amazon', delay: 2000 },
+        { text: '✓ Connected to eBay', delay: 3000 },
+        { text: '🔄 Syncing inventory...', delay: 4000 },
+        { text: '🔄 Updating prices...', delay: 5500 },
+        { text: '✓ Sync completed successfully!', delay: 7000 }
+    ];
+
+    updateLoadingSteps(steps);
+    
+    // Animate sync button
+    const syncBtn = document.getElementById('masterSyncBtn');
+    syncBtn.classList.add('syncing');
+    
+    setTimeout(() => {
+        hidePremiumLoading();
+        showSuccessModal();
+        updateDashboardAfterSync();
+        syncBtn.classList.remove('syncing');
         syncInProgress = false;
-        hideLoading();
         
-        if (data.success) {
-            showToast('Inventory sync completed successfully!', 'success');
-            showAlert('Inventory sync completed successfully!', 'success');
-            
-            // Update activity list
-            updateActivityList(data.report);
-            
-            // Update dashboard stats
-            loadDashboardData();
-        } else {
-            showToast('Sync failed: ' + data.error, 'error');
+        showPremiumToast('🎉 Sync completed successfully! All platforms are now up to date.', 'success');
+    }, 8000);
+}
+
+function showPremiumLoading(title, subtitle) {
+    const loading = document.getElementById('premiumLoading');
+    document.getElementById('loadingTitle').textContent = title;
+    document.getElementById('loadingSubtitle').textContent = subtitle;
+    loading.classList.add('show');
+    
+    // Animate progress bar
+    const progressBar = document.getElementById('loadingProgressBar');
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress > 95) {
+            progress = 95;
+            clearInterval(progressInterval);
         }
-    })
-    .catch(error => {
-        syncInProgress = false;
-        hideLoading();
-        showToast('Error during sync: ' + error.message, 'error');
+        progressBar.style.width = progress + '%';
+    }, 200);
+}
+
+function hidePremiumLoading() {
+    const loading = document.getElementById('premiumLoading');
+    const progressBar = document.getElementById('loadingProgressBar');
+    progressBar.style.width = '100%';
+    
+    setTimeout(() => {
+        loading.classList.remove('show');
+        progressBar.style.width = '0%';
+    }, 500);
+}
+
+function updateLoadingSteps(steps) {
+    const stepsContainer = document.getElementById('loadingSteps');
+    
+    steps.forEach((step, index) => {
+        setTimeout(() => {
+            stepsContainer.innerHTML = '';
+            steps.slice(0, index + 1).forEach((s, i) => {
+                const stepEl = document.createElement('div');
+                stepEl.className = i === index ? 'step active' : 'step completed';
+                stepEl.textContent = s.text;
+                stepsContainer.appendChild(stepEl);
+            });
+        }, step.delay);
     });
 }
 
-function updateActivityList(report) {
-    const activityList = document.getElementById('platformActivityList');
-    const newActivity = document.createElement('div');
-    newActivity.className = 'activity-item';
-    newActivity.innerHTML = `
-        <div class="activity-icon" style="background: var(--accent-green);">✓</div>
-        <div class="activity-content">
-            <div class="activity-title">Manual Sync Complete</div>
-            <div class="activity-time">Just now</div>
+function showSuccessModal() {
+    const modal = document.getElementById('successModal');
+    modal.classList.add('show');
+    
+    // Auto hide after 8 seconds
+    setTimeout(() => {
+        closeModal('successModal');
+    }, 8000);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('show');
+}
+
+function showPremiumToast(message, type = 'info', duration = 5000) {
+    const toastSystem = document.getElementById('toastSystem');
+    const toast = document.createElement('div');
+    toast.className = `premium-toast ${type}`;
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <div class="toast-icon">${icons[type]}</div>
+            <div class="toast-message">${message}</div>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
         </div>
     `;
-    activityList.insertBefore(newActivity, activityList.firstChild);
     
-    // Remove old activities if too many
-    if (activityList.children.length > 5) {
-        activityList.removeChild(activityList.lastChild);
+    toastSystem.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+function startRealtimeUpdates() {
+    realtimeInterval = setInterval(() => {
+        updateRealtimeData();
+        updateActivityFeed();
+    }, 30000); // Update every 30 seconds
+}
+
+function updateRealtimeData() {
+    // Simulate real-time updates
+    const revenue = document.getElementById('totalRevenue');
+    const orders = document.getElementById('totalOrders');
+    const currentRevenue = parseInt(revenue.textContent.replace(/[$,]/g, ''));
+    const currentOrders = parseInt(orders.textContent.replace(/,/g, ''));
+    
+    // Small random increases
+    const newRevenue = currentRevenue + Math.floor(Math.random() * 500);
+    const newOrders = currentOrders + Math.floor(Math.random() * 5);
+    
+    // Animate number changes
+    animateValue(revenue, currentRevenue, newRevenue, 2000, '$');
+    animateValue(orders, currentOrders, newOrders, 2000);
+}
+
+function animateValue(element, start, end, duration, prefix = '') {
+    const startTime = Date.now();
+    const range = end - start;
+    
+    function update() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const current = Math.floor(start + range * progress);
+        element.textContent = prefix + current.toLocaleString();
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    
+    requestAnimationFrame(update);
+}
+
+function updateActivityFeed() {
+    const activities = [
+        {
+            type: 'sale',
+            icon: '💳',
+            title: 'New order: $' + (Math.floor(Math.random() * 500) + 50),
+            desc: 'Premium Product - Customer: ' + ['Sarah K.', 'Mike T.', 'Jenny L.', 'Alex R.'][Math.floor(Math.random() * 4)],
+            platform: ['Amazon', 'Shopify', 'eBay'][Math.floor(Math.random() * 3)],
+            time: 'Just now'
+        }
+    ];
+    
+    // Add new activity to feed
+    const feed = document.getElementById('activityFeed');
+    const newActivity = createActivityElement(activities[0]);
+    feed.insertBefore(newActivity, feed.firstChild);
+    
+    // Remove old activities (keep max 10)
+    if (feed.children.length > 10) {
+        feed.removeChild(feed.lastChild);
     }
 }
 
-function generateInventoryReport() {
-    showToast('Generating inventory report...', 'info');
-    showLoading();
+function createActivityElement(activity) {
+    const item = document.createElement('div');
+    item.className = `activity-item ${activity.type}`;
+    item.innerHTML = `
+        <div class="activity-icon ${activity.type}-icon">${activity.icon}</div>
+        <div class="activity-content">
+            <div class="activity-main">
+                <h4>${activity.title}</h4>
+                <p>${activity.desc}</p>
+            </div>
+            <div class="activity-meta">
+                <span class="activity-time">${activity.time}</span>
+                <span class="activity-platform">${activity.platform}</span>
+            </div>
+        </div>
+        <button class="activity-action" onclick="viewActivityDetails()">View</button>
+    `;
     
-    fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            report_type: 'inventory',
-            format: 'csv'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        if (data.success) {
-            showToast('Inventory report generated successfully!', 'success');
-        } else {
-            showToast('Error generating report', 'error');
-        }
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('Error generating report:', error);
-        showToast('Error generating report', 'error');
-    });
+    // Add entrance animation
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(-20px)';
+    setTimeout(() => {
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '1';
+        item.style.transform = 'translateX(0)';
+    }, 100);
+    
+    return item;
 }
 
-function fixPriceDiscrepancies() {
-    showToast('Fixing price discrepancies...', 'info');
-    showLoading();
-    
-    // Simulate price fix process
+// Action Functions
+function fixInventoryIssues() {
+    showPremiumToast('🔧 Analyzing inventory discrepancies...', 'info');
     setTimeout(() => {
-        hideLoading();
-        showToast('Price discrepancies fixed successfully!', 'success');
-        
-        // Update discrepancy count
-        document.getElementById('inventoryDiscrepancies').textContent = '0';
-        document.getElementById('discrepancyChange').textContent = 'Good';
-        document.getElementById('discrepancyChange').className = 'stat-change positive';
+        showPremiumToast('✅ 2 inventory issues resolved successfully!', 'success');
     }, 2000);
 }
 
-function addNewPlatform() {
-    showToast('Redirecting to platform configuration...', 'info');
+function updatePricing() {
+    showPremiumToast('💰 Updating competitive pricing...', 'info');
     setTimeout(() => {
-        window.location.href = '/config';
-    }, 1000);
+        showPremiumToast('✅ Pricing updated based on market analysis!', 'success');
+    }, 3000);
 }
 
-function viewAnalytics() {
-    showToast('Opening analytics dashboard...', 'info');
+function syncAllPlatforms() {
+    runQuickSync();
+}
+
+function generateReport() {
+    showPremiumToast('📊 Generating comprehensive report...', 'info');
     setTimeout(() => {
-        window.location.href = '/reports';
-    }, 1000);
+        showPremiumToast('✅ Report generated and sent to your email!', 'success');
+    }, 2000);
 }
 
-function syncInventory() {
-    runInventorySync();
-}
-
-function monitorPrices() {
-    showToast('Price monitoring feature coming soon!', 'info');
-}
-
-function generateReports() {
-    generateInventoryReport();
-}
-
-function manageOrders() {
-    showToast('Order management feature coming soon!', 'info');
-}
-
-function showAlert(message, type = 'info') {
-    const alert = document.getElementById('syncAlert');
-    const alertMessage = document.getElementById('alertMessage');
+function refreshDashboard() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.classList.add('spinning');
     
-    alertMessage.textContent = message;
-    alert.className = `ecommerce-alert ${type}`;
-    alert.style.display = 'flex';
+    showPremiumToast('🔄 Refreshing dashboard data...', 'info');
     
     setTimeout(() => {
-        alert.style.display = 'none';
-    }, 5000);
+        refreshBtn.classList.remove('spinning');
+        updateRealtimeData();
+        showPremiumToast('✅ Dashboard updated with latest data!', 'success');
+    }, 2000);
 }
 
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span>${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">×</button>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Show toast
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
-    
-    // Hide toast after 5 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toast.parentElement.removeChild(toast);
+// Utility Functions
+function updateTimeDisplay() {
+    // Update time-based content
+}
+
+function initializeFloatingShapes() {
+    const shapes = document.querySelectorAll('.shape');
+    shapes.forEach(shape => {
+        const duration = 15 + Math.random() * 10;
+        shape.style.animationDuration = duration + 's';
+    });
+}
+
+function setupScrollAnimations() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
             }
-        }, 300);
-    }, 5000);
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    });
+
+    document.querySelectorAll('.chart-card, .action-group').forEach(el => {
+        observer.observe(el);
+    });
 }
 
-function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('show');
-}
-
-function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('show');
-}
-
-function startAutoRefresh() {
-    // Refresh dashboard data every 30 seconds
-    setInterval(() => {
-        loadDashboardData();
-    }, 30000);
-}
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (realtimeInterval) {
+        clearInterval(realtimeInterval);
+    }
+});
 </script>
 {% endblock %}

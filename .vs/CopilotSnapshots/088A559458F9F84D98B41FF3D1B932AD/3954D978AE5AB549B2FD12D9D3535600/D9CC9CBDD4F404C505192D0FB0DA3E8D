@@ -1,0 +1,102 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Error {{ error_code }} - Data Automation Bot{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-container">
+        <div class="error-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+        </div>
+        
+        <div class="error-content">
+            <h1 class="error-code">{{ error_code }}</h1>
+            <h2 class="error-title">Oops! Something went wrong</h2>
+            <p class="error-message">{{ error_message }}</p>
+            
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v2zm9 3.5a2.5 2.5 0 105 0 2.5 2.5 0 00-5 0z"/>
+                    </svg>
+                    Go to Dashboard
+                </a>
+                
+                <button class="btn btn-secondary" onclick="window.history.back()">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11 17l-5-5 5-5v10z"/>
+                    </svg>
+                    Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+}
+
+.error-container {
+    text-align: center;
+    max-width: 500px;
+}
+
+.error-icon {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 2rem;
+    color: #f87171;
+}
+
+.error-code {
+    font-size: 4rem;
+    font-weight: 700;
+    color: #374151;
+    margin: 0 0 1rem;
+}
+
+.error-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 1rem;
+}
+
+.error-message {
+    color: #6b7280;
+    margin: 0 0 2rem;
+    font-size: 1.1rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .error-code {
+        font-size: 3rem;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .error-actions .btn {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+</style>
+{% endblock %}

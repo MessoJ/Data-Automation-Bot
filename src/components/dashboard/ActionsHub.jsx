@@ -1,0 +1,128 @@
+import { motion } from 'framer-motion'
+import { Zap, AlertTriangle, Plus, BarChart3 } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+const ActionsHub = ({ priorityActions, quickActions }) => {
+  const handleAction = (actionId) => {
+    const actions = {
+      fixInventoryIssues: () => {
+        toast.promise(
+          new Promise(resolve => setTimeout(resolve, 2000)),
+          {
+            loading: '?? Analyzing inventory discrepancies...',
+            success: '? 2 inventory issues resolved successfully!',
+            error: '? Failed to resolve inventory issues'
+          }
+        )
+      },
+      updatePricing: () => {
+        toast.promise(
+          new Promise(resolve => setTimeout(resolve, 3000)),
+          {
+            loading: '?? Updating competitive pricing...',
+            success: '? Pricing updated based on market analysis!',
+            error: '? Failed to update pricing'
+          }
+        )
+      },
+      generateReport: () => {
+        toast.promise(
+          new Promise(resolve => setTimeout(resolve, 2000)),
+          {
+            loading: '?? Generating comprehensive report...',
+            success: '? Report generated and sent to your email!',
+            error: '? Failed to generate report'
+          }
+        )
+      },
+      addNewProduct: () => {
+        toast.success('??? Product creation wizard coming soon!')
+      },
+      viewAnalytics: () => {
+        toast.success('?? Redirecting to analytics dashboard...')
+      }
+    }
+
+    if (typeof actionId === 'function') {
+      actionId()
+    } else if (actions[actionId]) {
+      actions[actionId]()
+    }
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      className="space-y-6"
+    >
+      <div className="flex items-center gap-3">
+        <Zap className="w-8 h-8 text-warning-600" />
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-800">Smart Actions</h2>
+          <p className="text-neutral-600">Automate your workflow with intelligent actions</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Priority Actions */}
+        <div className="card">
+          <h3 className="text-xl font-bold text-neutral-800 mb-6">Priority Actions</h3>
+          <div className="space-y-4">
+            {priorityActions.map((action) => (
+              <motion.div
+                key={action.id}
+                whileHover={{ x: 4 }}
+                onClick={() => handleAction(action.action)}
+                className={`flex items-center gap-4 p-4 rounded-xl border-l-4 cursor-pointer transition-all duration-200 ${
+                  action.urgency === 'critical' 
+                    ? 'bg-error-50 border-error-500 hover:bg-error-100' 
+                    : 'bg-warning-50 border-warning-500 hover:bg-warning-100'
+                }`}
+              >
+                <div className="text-2xl">{action.icon}</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-neutral-800">{action.title}</h4>
+                  <p className="text-sm text-neutral-600">{action.description}</p>
+                </div>
+                <div className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
+                  action.urgency === 'critical' 
+                    ? 'bg-error-500 text-white' 
+                    : 'bg-warning-500 text-white'
+                }`}>
+                  {action.urgency}
+                </div>
+                <div className="text-primary-500 text-xl">?</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="card">
+          <h3 className="text-xl font-bold text-neutral-800 mb-6">Quick Actions</h3>
+          <div className="space-y-4">
+            {quickActions.map((action) => (
+              <motion.div
+                key={action.id}
+                whileHover={{ x: 4 }}
+                onClick={() => handleAction(action.action)}
+                className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 hover:bg-primary-50 border border-neutral-100 hover:border-primary-200 cursor-pointer transition-all duration-200"
+              >
+                <div className="text-2xl">{action.icon}</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-neutral-800">{action.title}</h4>
+                  <p className="text-sm text-neutral-600">{action.description}</p>
+                </div>
+                <div className="text-primary-500 text-xl">?</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  )
+}
+
+export default ActionsHub

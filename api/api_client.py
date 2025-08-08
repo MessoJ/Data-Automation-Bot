@@ -9,6 +9,7 @@ import logging
 import requests
 import time
 from typing import Dict, List, Optional, Any
+from datetime import datetime, timedelta
 
 import config as config
 from utils.helpers import handle_exceptions
@@ -39,6 +40,31 @@ class APIClient:
         
         logging.debug(f"Initialized API client with base URL: {self.base_url}")
     
+    def _is_demo_mode(self) -> bool:
+        """Return True when external API isn't configured for real usage."""
+        if not self.base_url:
+            return True
+        if "api.example.com" in self.base_url:
+            return True
+        if not self.api_key:
+            return True
+        return False
+
+    def _generate_synthetic_data(self, count: int = 100) -> List[Dict[str, Any]]:
+        """Generate deterministic synthetic records for local dev/demo."""
+        now = datetime.now()
+        data: List[Dict[str, Any]] = []
+        for i in range(count):
+            data.append({
+                "id": i + 1,
+                "type": "revenue" if i % 3 == 0 else ("inventory" if i % 3 == 1 else "general"),
+                "value": round(100 + (i * 7.3) % 250, 2),
+                "timestamp": (now - timedelta(minutes=i * 10)).isoformat(),
+                "source_id": f"synthetic_{(i % 5) + 1}",
+                "category": "demo",
+            })
+        return data
+    
     @handle_exceptions
     def fetch_data(self, endpoint: str = "/data", params: Dict = None) -> List[Dict]:
         """
@@ -51,18 +77,19 @@ class APIClient:
         Returns:
             List of data records as dictionaries.
         """
-        url = f"{self.base_url}{endpoint}"
         params = params or {}
-        
+        # Safe local/demo fallback
+        if self._is_demo_mode():
+            logging.warning("API not fully configured; using synthetic demo data instead of external call")
+            return self._generate_synthetic_data(count=int(params.get("limit", 100) or 100))
+
+        url = f"{self.base_url}{endpoint}"
         logging.info(f"Fetching data from {url}")
         logging.debug(f"Request parameters: {params}")
-        
         response = self.session.get(url, params=params, timeout=self.timeout)
         response.raise_for_status()
-        
         data = response.json()
         logging.info(f"Successfully fetched {len(data)} records")
-        
         return data
     
     @handle_exceptions
@@ -77,12 +104,15 @@ class APIClient:
         Returns:
             Response data as dictionary.
         """
+        # Safe local/demo fallback
+        if self._is_demo_mode():
+            logging.warning("API not fully configured; simulating POST success locally")
+            return {"success": True, "echo": data}
+
         url = f"{self.base_url}{endpoint}"
-        
         logging.info(f"Posting data to {url}")
         response = self.session.post(url, json=data, timeout=self.timeout)
         response.raise_for_status()
-        
         return response.json()
     
     @handle_exceptions
@@ -101,6 +131,10 @@ class APIClient:
         page = 1
         has_more = True
         
+        # Safe local/demo fallback
+        if self._is_demo_mode():
+            return self._generate_synthetic_data(count=page_size)
+
         while has_more:
             params = {
                 "page": page,

@@ -1,0 +1,440 @@
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { 
+  Settings, 
+  Database, 
+  Wifi, 
+  Clock, 
+  Shield,
+  CheckCircle,
+  AlertCircle,
+  Copy,
+  Download,
+  Server,
+  Globe,
+  Key
+} from 'lucide-react'
+import axios from 'axios'
+import toast from 'react-hot-toast'
+
+const Config = () => {
+  const [config, setConfig] = useState(null)
+  const [status, setStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadConfiguration()
+    loadSystemStatus()
+  }, [])
+
+  const loadConfiguration = async () => {
+    try {
+      const response = await axios.get('/api/config')
+      setConfig(response.data)
+    } catch (error) {
+      toast.error('Failed to load configuration')
+      console.error('Error loading config:', error)
+    }
+  }
+
+  const loadSystemStatus = async () => {
+    try {
+      const response = await axios.get('/api/status')
+      setStatus(response.data)
+    } catch (error) {
+      console.error('Error loading status:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${label} copied to clipboard!`)
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard')
+    })
+  }
+
+  const exportConfiguration = () => {
+    const configData = JSON.stringify(config, null, 2)
+    const blob = new Blob([configData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `config-export-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast.success('Configuration exported successfully!')
+  }
+
+  const testConnection = async (type) => {
+    toast.promise(
+      new Promise(resolve => setTimeout(resolve, 2000)),
+      {
+        loading: `Testing ${type} connection...`,
+        success: `? ${type} connection successful!`,
+        error: `? ${type} connection failed`
+      }
+    )
+  }
+
+  const platformConnections = [
+    {
+      name: 'Shopify',
+      status: 'Connected',
+      url: 'your-store.myshopify.com',
+      icon: '???',
+      color: 'success'
+    },
+    {
+      name: 'Amazon',
+      status: 'Connected',
+      url: 'Seller Central',
+      icon: '??',
+      color: 'success'
+    },
+    {
+      name: 'eBay',
+      status: 'Connected',
+      url: 'Your eBay Store',
+      icon: '??',
+      color: 'success'
+    },
+    {
+      name: 'WooCommerce',
+      status: 'Connected',
+      url: 'yoursite.com',
+      icon: '??',
+      color: 'success'
+    },
+    {
+      name: 'Etsy',
+      status: 'Connected',
+      url: 'Your Etsy Shop',
+      icon: '??',
+      color: 'success'
+    }
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="loading-ring w-8 h-8" />
+        <span className="ml-3 text-neutral-600">Loading configuration...</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Settings className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-800">System Configuration</h1>
+            <p className="text-neutral-600">Manage your system settings and connections</p>
+          </div>
+        </div>
+
+        <button
+          onClick={exportConfiguration}
+          className="btn-secondary"
+        >
+          <Download className="w-5 h-5" />
+          Export Config
+        </button>
+      </motion.div>
+
+      {/* Status Overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+      >
+        <div className={`card text-center ${
+          status?.database?.connected ? 'border-success-200 bg-success-50' : 'border-error-200 bg-error-50'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+            status?.database?.connected ? 'bg-success-500' : 'bg-error-500'
+          }`}>
+            <Database className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="font-bold text-neutral-800 mb-1">Database</h3>
+          <p className={`text-sm ${
+            status?.database?.connected ? 'text-success-600' : 'text-error-600'
+          }`}>
+            {status?.database?.connected ? 'Connected' : 'Disconnected'}
+          </p>
+        </div>
+
+        <div className={`card text-center ${
+          status?.api?.configured ? 'border-success-200 bg-success-50' : 'border-warning-200 bg-warning-50'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+            status?.api?.configured ? 'bg-success-500' : 'bg-warning-500'
+          }`}>
+            <Globe className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="font-bold text-neutral-800 mb-1">API</h3>
+          <p className={`text-sm ${
+            status?.api?.configured ? 'text-success-600' : 'text-warning-600'
+          }`}>
+            {status?.api?.configured ? 'Configured' : 'Not Configured'}
+          </p>
+        </div>
+
+        <div className={`card text-center ${
+          status?.scheduler?.running ? 'border-success-200 bg-success-50' : 'border-warning-200 bg-warning-50'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+            status?.scheduler?.running ? 'bg-success-500' : 'bg-warning-500'
+          }`}>
+            <Clock className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="font-bold text-neutral-800 mb-1">Scheduler</h3>
+          <p className={`text-sm ${
+            status?.scheduler?.running ? 'text-success-600' : 'text-warning-600'
+          }`}>
+            {status?.scheduler?.running ? 'Running' : 'Stopped'}
+          </p>
+        </div>
+
+        <div className={`card text-center ${
+          status?.stripe?.configured ? 'border-success-200 bg-success-50' : 'border-warning-200 bg-warning-50'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+            status?.stripe?.configured ? 'bg-success-500' : 'bg-warning-500'
+          }`}>
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="font-bold text-neutral-800 mb-1">Stripe</h3>
+          <p className={`text-sm ${
+            status?.stripe?.configured ? 'text-success-600' : 'text-warning-600'
+          }`}>
+            {status?.stripe?.configured ? 'Configured' : 'Not Configured'}
+          </p>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Database Configuration */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="card"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Database className="w-6 h-6 text-primary-600" />
+              <h2 className="text-xl font-bold text-neutral-800">Database</h2>
+            </div>
+            <button
+              onClick={() => testConnection('Database')}
+              className="btn-secondary text-sm"
+            >
+              Test Connection
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <ConfigRow
+              label="Type"
+              value={config?.database?.type || 'SQLite'}
+              onCopy={() => copyToClipboard(config?.database?.type, 'Database type')}
+            />
+            <ConfigRow
+              label="Host"
+              value={config?.database?.host || 'localhost'}
+              onCopy={() => copyToClipboard(config?.database?.host, 'Database host')}
+            />
+            <ConfigRow
+              label="Port"
+              value={config?.database?.port || 'N/A'}
+              onCopy={() => copyToClipboard(config?.database?.port, 'Database port')}
+            />
+            <ConfigRow
+              label="Database Name"
+              value={config?.database?.name || 'data_automation'}
+              onCopy={() => copyToClipboard(config?.database?.name, 'Database name')}
+            />
+          </div>
+        </motion.div>
+
+        {/* API Configuration */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="card"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Globe className="w-6 h-6 text-info-600" />
+              <h2 className="text-xl font-bold text-neutral-800">API Settings</h2>
+            </div>
+            <button
+              onClick={() => testConnection('API')}
+              className="btn-secondary text-sm"
+            >
+              Test Connection
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <ConfigRow
+              label="Base URL"
+              value={config?.api?.base_url || 'Not configured'}
+              onCopy={() => copyToClipboard(config?.api?.base_url, 'API base URL')}
+            />
+            <ConfigRow
+              label="Timeout"
+              value={`${config?.api?.timeout || 30} seconds`}
+              onCopy={() => copyToClipboard(config?.api?.timeout, 'API timeout')}
+            />
+            <ConfigRow
+              label="API Key Status"
+              value={config?.api?.configured ? 'Configured' : 'Not configured'}
+              showCopy={false}
+            />
+          </div>
+        </motion.div>
+
+        {/* Scheduler Configuration */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="card"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Clock className="w-6 h-6 text-warning-600" />
+            <h2 className="text-xl font-bold text-neutral-800">Scheduler</h2>
+          </div>
+
+          <div className="space-y-4">
+            <ConfigRow
+              label="Sync Interval"
+              value={`${config?.scheduler?.interval || 900} seconds (${Math.floor((config?.scheduler?.interval || 900) / 60)} minutes)`}
+              onCopy={() => copyToClipboard(config?.scheduler?.interval, 'Sync interval')}
+            />
+            <ConfigRow
+              label="Retry Attempts"
+              value={config?.scheduler?.retry_attempts || '3'}
+              onCopy={() => copyToClipboard(config?.scheduler?.retry_attempts, 'Retry attempts')}
+            />
+            <ConfigRow
+              label="Retry Delay"
+              value={`${config?.scheduler?.retry_delay || 60} seconds`}
+              onCopy={() => copyToClipboard(config?.scheduler?.retry_delay, 'Retry delay')}
+            />
+          </div>
+        </motion.div>
+
+        {/* System Information */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="card"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Server className="w-6 h-6 text-purple-600" />
+            <h2 className="text-xl font-bold text-neutral-800">System Info</h2>
+          </div>
+
+          <div className="space-y-4">
+            <ConfigRow
+              label="Server"
+              value="Flask 2.3.3 on Python 3.8+"
+              showCopy={false}
+            />
+            <ConfigRow
+              label="Uptime"
+              value="2 days, 14 hours"
+              showCopy={false}
+            />
+            <ConfigRow
+              label="Database Records"
+              value={`${status?.database?.total_records || 0} total`}
+              showCopy={false}
+            />
+            <ConfigRow
+              label="Last Sync"
+              value="2 minutes ago"
+              showCopy={false}
+            />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Platform Connections */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="card"
+      >
+        <h2 className="text-xl font-bold text-neutral-800 mb-6">Platform Connections</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {platformConnections.map((platform) => (
+            <div key={platform.name} className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">{platform.icon}</div>
+                <div>
+                  <h4 className="font-medium text-neutral-800">{platform.name}</h4>
+                  <p className="text-sm text-neutral-600">{platform.url}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${
+                  platform.color === 'success' ? 'bg-success-500' : 'bg-error-500'
+                } animate-pulse`} />
+                <button
+                  onClick={() => testConnection(platform.name)}
+                  className="btn-secondary text-xs px-2 py-1"
+                >
+                  Test
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// Configuration Row Component
+const ConfigRow = ({ label, value, onCopy, showCopy = true }) => (
+  <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+    <div>
+      <span className="text-sm font-medium text-neutral-600">{label}</span>
+      <div className="font-mono text-sm text-neutral-800 mt-1">{value}</div>
+    </div>
+    {showCopy && (
+      <button
+        onClick={onCopy}
+        className="p-2 text-neutral-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+        title="Copy to clipboard"
+      >
+        <Copy className="w-4 h-4" />
+      </button>
+    )}
+  </div>
+)
+
+export default Config

@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Jobs - Data Automation Bot{% endblock %}
+
+{% block content %}
+<div class="jobs-page">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">Scheduled Jobs</h1>
+        <p class="page-subtitle">Monitor and manage automated data processing tasks</p>
+    </div>
+
+    <!-- Scheduler Status -->
+    <div class="scheduler-status">
+        <div class="status-card" id="schedulerStatusCard">
+            <div class="status-icon" id="schedulerIcon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <div class="status-content">
+                <h3 class="status-title" id="schedulerStatusText">Scheduler Status</h3>
+                <p class="status-desc" id="schedulerStatusDesc">Checking scheduler status...</p>
+            </div>
+            <div class="status-actions">
+                <button class="btn btn-sm" id="schedulerToggle" onclick="toggleScheduler()">
+                    <span id="schedulerToggleText">Loading...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs List -->
+    <div class="jobs-list">
+        <div class="jobs-header">
+            <h3 class="section-title">Active Jobs</h3>
+            <button class="btn btn-secondary" onclick="refreshJobs()">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
+
+        <div class="jobs-grid" id="jobsGrid">
+            <!-- Jobs will be loaded here -->
+            <div class="loading-placeholder">
+                <div class="loading-spinner"></div>
+                <p>Loading jobs...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job History -->
+    <div class="job-history">
+        <h3 class="section-title">Recent Job Activity</h3>
+        <div class="history-timeline" id="jobHistory">
+            <div class="timeline-item">
+                <div class="timeline-marker timeline-marker-blue"></div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <h4 class="timeline-title">System Initialization</h4>
+                        <span class="timeline-time">System started</span>
+                    </div>
+                    <p class="timeline-desc">Data Automation Bot initialized successfully</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job Details Modal -->
+<div class="modal" id="jobModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="jobModalTitle">Job Details</h3>
+            <button class="modal-close" onclick="closeJobModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="job-details" id="jobDetails">
+                <!-- Job details will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeJobModal()">Close</button>
+            <button class="btn btn-warning" id="pauseJobBtn" onclick="pauseJob()">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 9v6h4V9h-4zm-4 8h12v-6H6v6z"/>
+                </svg>
+                Pause Job
+            </button>
+            <button class="btn btn-success" id="resumeJobBtn" onclick="resumeJob()" style="display: none;">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                Resume Job
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/jobs.js') }}"></script>
+{% endblock %}

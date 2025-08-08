@@ -1,0 +1,108 @@
+﻿import { motion } from 'framer-motion'
+import { BarChart3, FileText, TrendingUp } from 'lucide-react'
+
+const ChartsSection = () => {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Revenue Chart */}
+        <div className="lg:col-span-2 card">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-neutral-800">Revenue Analytics</h3>
+              <p className="text-neutral-600">Real-time performance across all channels</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex bg-neutral-100 rounded-lg p-1">
+                <button className="px-3 py-1 text-sm font-medium bg-primary-500 text-white rounded-md">
+                  Revenue
+                </button>
+                <button className="px-3 py-1 text-sm font-medium text-neutral-600">
+                  Orders
+                </button>
+                <button className="px-3 py-1 text-sm font-medium text-neutral-600">
+                  Conversion
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Chart Placeholder */}
+          <div className="h-64 bg-gradient-to-r from-primary-50 to-success-50 rounded-xl flex items-center justify-center">
+            <div className="text-center">
+              <BarChart3 className="w-12 h-12 text-primary-400 mx-auto mb-2" />
+              <p className="text-neutral-600">Revenue chart would render here</p>
+            </div>
+          </div>
+          
+          {/* Insights */}
+          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-neutral-200">
+            <div className="flex items-center gap-2 text-sm text-neutral-600">
+              <span>🔥</span>
+              <span>Peak sales: $3,247 at 3:00 PM</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-neutral-600">
+              <span>📈</span>
+              <span>Trending up 24% vs yesterday</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Platform Performance */}
+        <div className="card">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-neutral-800">Platform Performance</h3>
+            <p className="text-neutral-600 text-sm">Revenue distribution by channel</p>
+          </div>
+          
+          <div className="space-y-4">
+            {{
+              { name: 'Shopify', value: '$38,247', percentage: 65, change: '+15%', color: 'success', icon: '🛍️' },
+              { name: 'Amazon', value: '$28,193', percentage: 48, change: '+8%', color: 'warning', icon: '📦' },
+              { name: 'eBay', value: '$12,847', percentage: 22, change: '-2%', color: 'info', icon: '🏪' },
+              { name: 'WooCommerce', value: '$5,105', percentage: 9, change: '+32%', color: 'primary', icon: '🌐' }
+            }.map((platform) => (
+              <div key={platform.name} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-primary-400 to-primary-500 rounded-lg flex items-center justify-center text-sm">
+                      {platform.icon}
+                    </div>
+                    <span className="font-medium text-neutral-800">{platform.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-neutral-800">{platform.value}</div>
+                    <div className={`text-xs font-medium ${
+                      platform.change.startsWith('+') ? 'text-success-600' : 'text-error-600'
+                    }`}>
+                      {platform.change}
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full bg-neutral-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${
+                      platform.color === 'success' ? 'bg-success-500' :
+                      platform.color === 'warning' ? 'bg-warning-500' :
+                      platform.color === 'info' ? 'bg-info-500' :
+                      'bg-primary-500'
+                    }`}
+                    style={{ width: `${platform.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  )
+}
+
+export default ChartsSection

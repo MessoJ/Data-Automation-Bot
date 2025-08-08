@@ -1,0 +1,396 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}E-commerce Data Automation - Dashboard{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2316a085'><path d='M16 11V7a4 4 0 00-8 0v4H6v9h12v-9h-2zm-6-4a2 2 0 114 0v4h-4V7z'/></svg>">
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Professional e-commerce data automation platform. Sync inventory, pricing, and orders across all your sales channels.">
+    <meta name="author" content="E-commerce Data Automation">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Modern Navigation -->
+    <nav class="modern-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <div class="logo-icon">🛒</div>
+                    <div class="brand-text">
+                        <span class="brand-name">E-commerce Hub</span>
+                        <span class="brand-subtitle">Data Automation</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nav-menu" id="navMenu">
+                <a href="/web/" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="/reports" class="nav-link {% if request.endpoint == 'reports_page' %}active{% endif %}">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Analytics</span>
+                </a>
+                <a href="/config" class="nav-link {% if request.endpoint == 'config_page' %}active{% endif %}">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </div>
+            
+            <div class="nav-actions">
+                <div class="sync-status" id="navSyncStatus">
+                    <div class="status-dot online"></div>
+                    <span class="status-text">All Synced</span>
+                </div>
+                <button class="nav-sync-btn" onclick="runQuickSync()" aria-label="Quick sync">
+                    <span class="sync-icon">🔄</span>
+                </button>
+            </div>
+            
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Toast Container -->
+    <div class="toast-container" id="globalToastContainer"></div>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Navigation JavaScript -->
+    <script>
+        // Modern Navigation Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                    navToggle.classList.toggle('active');
+                });
+            }
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                    navMenu.classList.remove('active');
+                    navToggle.classList.remove('active');
+                }
+            });
+            
+            // Update sync status periodically
+            updateNavSyncStatus();
+            setInterval(updateNavSyncStatus, 30000);
+        });
+        
+        function updateNavSyncStatus() {
+            const statusDot = document.querySelector('#navSyncStatus .status-dot');
+            const statusText = document.querySelector('#navSyncStatus .status-text');
+            
+            if (statusDot && statusText) {
+                // Simulate status check
+                const statuses = [
+                    { class: 'online', text: 'All Synced' },
+                    { class: 'syncing', text: 'Syncing...' },
+                    { class: 'warning', text: 'Issues Found' }
+                ];
+                
+                const status = statuses[0]; // Default to online
+                statusDot.className = `status-dot ${status.class}`;
+                statusText.textContent = status.text;
+            }
+        }
+        
+        // Global toast function
+        function showGlobalToast(message, type = 'info') {
+            const container = document.getElementById('globalToastContainer');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-icon">${icons[type] || icons.info}</span>
+                    <span class="toast-message">${message}</span>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }, 5000);
+        }
+    </script>
+
+    <!-- Modern Navigation Styles -->
+    <style>
+        /* Modern Navigation */
+        .modern-nav {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .nav-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+        
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .brand-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        
+        .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1;
+        }
+        
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+        
+        .nav-link.active {
+            color: var(--primary-color);
+            background: rgba(22, 160, 133, 0.1);
+        }
+        
+        .nav-icon {
+            font-size: 1.1rem;
+        }
+        
+        .nav-text {
+            font-size: 0.875rem;
+        }
+        
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+        
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: var(--radius-full);
+            background: var(--success-color);
+        }
+        
+        .status-dot.syncing {
+            background: var(--warning-color);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .status-dot.warning {
+            background: var(--error-color);
+        }
+        
+        .nav-sync-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--primary-color);
+            color: var(--text-white);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-sync-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .nav-sync-btn .sync-icon {
+            font-size: 1rem;
+        }
+        
+        .nav-toggle {
+            display: none;
+            flex-direction: column;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--space-2);
+            gap: 4px;
+        }
+        
+        .nav-toggle span {
+            width: 20px;
+            height: 2px;
+            background: var(--text-secondary);
+            border-radius: var(--radius-full);
+            transition: all var(--transition-fast);
+        }
+        
+        .nav-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        
+        .nav-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .nav-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+        
+        /* Mobile Navigation */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 var(--space-4);
+            }
+            
+            .nav-menu {
+                position: fixed;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: var(--bg-primary);
+                flex-direction: column;
+                padding: var(--space-6);
+                box-shadow: var(--shadow-lg);
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all var(--transition-normal);
+                border-top: 1px solid var(--gray-200);
+            }
+            
+            .nav-menu.active {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            .nav-link {
+                width: 100%;
+                justify-content: center;
+                padding: var(--space-4);
+            }
+            
+            .nav-actions {
+                display: none;
+            }
+            
+            .nav-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .brand-text {
+                display: none;
+            }
+        }
+    </style>
+</body>
+</html>

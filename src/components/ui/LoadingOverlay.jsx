@@ -1,0 +1,62 @@
+import { motion, AnimatePresence } from 'framer-motion'
+
+const LoadingOverlay = ({ 
+  title = "Loading...", 
+  subtitle = "Please wait while we process your request",
+  steps = []
+}) => {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-3xl p-12 max-w-md w-full mx-4 text-center shadow-2xl"
+        >
+          {/* Loading Spinner */}
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="loading-ring w-20 h-20" />
+            <div className="loading-ring w-16 h-16 absolute top-2 left-2" />
+            <div className="loading-ring w-12 h-12 absolute top-4 left-4" />
+          </div>
+
+          {/* Title and Subtitle */}
+          <h3 className="text-xl font-bold text-neutral-800 mb-2">{title}</h3>
+          <p className="text-neutral-600 mb-6">{subtitle}</p>
+
+          {/* Progress Steps */}
+          {steps.length > 0 && (
+            <div className="space-y-3 text-left">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.2 }}
+                  className={`text-sm flex items-center gap-2 ${
+                    step.completed ? 'text-success-600 font-medium' :
+                    step.active ? 'text-primary-600 font-semibold' :
+                    'text-neutral-500'
+                  }`}
+                >
+                  {step.completed && <span>?</span>}
+                  {step.active && <span>??</span>}
+                  {step.pending && <span>?</span>}
+                  {step.text}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+export default LoadingOverlay

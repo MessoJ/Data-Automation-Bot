@@ -1,0 +1,850 @@
+﻿{% extends "base.html" %}
+
+{% block title %}E-commerce Data Automation Dashboard{% endblock %}
+
+{% block content %}
+<div class="modern-dashboard">
+    <!-- Welcome Section with Personalized Greeting -->
+    <div class="welcome-header">
+        <div class="welcome-content">
+            <div class="welcome-text">
+                <h1 class="welcome-title">
+                    <span class="wave-emoji">👋</span> Welcome back!
+                </h1>
+                <p class="welcome-subtitle">Here's what's happening with your e-commerce automation today</p>
+            </div>
+            <div class="welcome-actions">
+                <button class="sync-now-btn" onclick="runQuickSync()" aria-label="Sync all platforms">
+                    <span class="sync-icon">🔄</span>
+                    <span>Sync All</span>
+                </button>
+                <div class="last-sync">
+                    Last sync: <span id="lastSyncTime">2 min ago</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Status Banner -->
+    <div class="status-banner" id="statusBanner">
+        <div class="status-content">
+            <div class="status-indicator online" id="statusIndicator"></div>
+            <span id="statusMessage">All systems operational • 3 platforms synced • Real-time updates active</span>
+        </div>
+    </div>
+
+    <!-- Key Performance Metrics - Redesigned for Easy Understanding -->
+    <div class="performance-section">
+        <h2 class="section-heading">
+            <span class="heading-icon">📊</span>
+            Business Performance
+        </h2>
+        
+        <div class="metrics-grid">
+            <!-- Revenue Card -->
+            <div class="metric-card revenue-card" id="revenueCard">
+                <div class="metric-header">
+                    <div class="metric-icon revenue-icon">💰</div>
+                    <div class="metric-trend">
+                        <span class="trend-value positive" id="revenueTrend">+22%</span>
+                        <span class="trend-period">vs last month</span>
+                    </div>
+                </div>
+                <div class="metric-value">
+                    <h3 id="totalRevenue">$47,892</h3>
+                    <p class="metric-label">Revenue (Last 30 Days)</p>
+                </div>
+                <div class="metric-footer">
+                    <div class="metric-detail">
+                        <span class="detail-label">Daily avg:</span>
+                        <span class="detail-value" id="dailyAvg">$1,596</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Health -->
+            <div class="metric-card inventory-card" id="inventoryCard">
+                <div class="metric-header">
+                    <div class="metric-icon inventory-icon">📦</div>
+                    <div class="metric-status">
+                        <div class="status-dot healthy" id="inventoryStatus"></div>
+                        <span id="inventoryStatusText">Healthy</span>
+                    </div>
+                </div>
+                <div class="metric-value">
+                    <h3 id="inventoryItems">2,847</h3>
+                    <p class="metric-label">Active Products</p>
+                </div>
+                <div class="metric-footer">
+                    <div class="metric-detail">
+                        <span class="detail-label">Discrepancies:</span>
+                        <span class="detail-value warning" id="discrepancyCount">3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Today -->
+            <div class="metric-card orders-card" id="ordersCard">
+                <div class="metric-header">
+                    <div class="metric-icon orders-icon">🛍️</div>
+                    <div class="metric-comparison">
+                        <span class="comparison-text">vs yesterday</span>
+                        <span class="comparison-value positive" id="ordersComparison">+8</span>
+                    </div>
+                </div>
+                <div class="metric-value">
+                    <h3 id="ordersToday">94</h3>
+                    <p class="metric-label">Orders Today</p>
+                </div>
+                <div class="metric-footer">
+                    <div class="order-sources">
+                        <div class="source-item">
+                            <span class="source-name">Shopify:</span>
+                            <span class="source-count">42</span>
+                        </div>
+                        <div class="source-item">
+                            <span class="source-name">Amazon:</span>
+                            <span class="source-count">52</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Status -->
+            <div class="metric-card platforms-card" id="platformsCard">
+                <div class="metric-header">
+                    <div class="metric-icon platforms-icon">🔗</div>
+                    <div class="platform-health">
+                        <div class="health-indicator excellent"></div>
+                        <span>All Connected</span>
+                    </div>
+                </div>
+                <div class="metric-value">
+                    <h3 id="activePlatforms">3</h3>
+                    <p class="metric-label">Active Platforms</p>
+                </div>
+                <div class="metric-footer">
+                    <div class="platform-list">
+                        <div class="platform-item">
+                            <span class="platform-status online"></span>
+                            <span>Shopify</span>
+                        </div>
+                        <div class="platform-item">
+                            <span class="platform-status online"></span>
+                            <span>Amazon</span>
+                        </div>
+                        <div class="platform-item">
+                            <span class="platform-status online"></span>
+                            <span>eBay</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section - Redesigned for Customer Focus -->
+    <div class="actions-section">
+        <h2 class="section-heading">
+            <span class="heading-icon">⚡</span>
+            Quick Actions
+        </h2>
+        
+        <div class="actions-grid">
+            <div class="action-item primary-action" onclick="runInventorySync()">
+                <div class="action-icon sync-icon">🔄</div>
+                <div class="action-content">
+                    <h3>Sync Inventory</h3>
+                    <p>Update all platforms instantly</p>
+                </div>
+                <div class="action-badge">Most Used</div>
+            </div>
+
+            <div class="action-item" onclick="fixDiscrepancies()">
+                <div class="action-icon fix-icon">🔧</div>
+                <div class="action-content">
+                    <h3>Fix Discrepancies</h3>
+                    <p>Resolve pricing & inventory issues</p>
+                </div>
+                <div class="action-count" id="discrepancyBadge">3</div>
+            </div>
+
+            <div class="action-item" onclick="generateReport()">
+                <div class="action-icon report-icon">📊</div>
+                <div class="action-content">
+                    <h3>Download Report</h3>
+                    <p>Get performance insights</p>
+                </div>
+            </div>
+
+            <div class="action-item" onclick="addPlatform()">
+                <div class="action-icon add-icon">➕</div>
+                <div class="action-content">
+                    <h3>Add Platform</h3>
+                    <p>Connect new marketplace</p>
+                </div>
+            </div>
+
+            <div class="action-item" onclick="viewAnalytics()">
+                <div class="action-icon analytics-icon">📈</div>
+                <div class="action-content">
+                    <h3>View Analytics</h3>
+                    <p>Detailed performance data</p>
+                </div>
+            </div>
+
+            <div class="action-item" onclick="manageAlerts()">
+                <div class="action-icon alerts-icon">🔔</div>
+                <div class="action-content">
+                    <h3>Manage Alerts</h3>
+                    <p>Configure notifications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Chart Section - Simplified and Visual -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <h2 class="section-heading">
+                <span class="heading-icon">📈</span>
+                Revenue Trends
+            </h2>
+            <div class="chart-controls">
+                <div class="period-selector">
+                    <button class="period-btn" data-period="7">7 Days</button>
+                    <button class="period-btn active" data-period="30">30 Days</button>
+                    <button class="period-btn" data-period="90">3 Months</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+        </div>
+        
+        <div class="chart-insights">
+            <div class="insight-item">
+                <span class="insight-icon">🚀</span>
+                <span class="insight-text">Best day: <strong>$2,340</strong> on March 15</span>
+            </div>
+            <div class="insight-item">
+                <span class="insight-icon">📊</span>
+                <span class="insight-text">Average daily growth: <strong>+3.2%</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Feed - Customer-Friendly -->
+    <div class="activity-section">
+        <h2 class="section-heading">
+            <span class="heading-icon">⚡</span>
+            Recent Activity
+        </h2>
+        
+        <div class="activity-feed" id="activityFeed">
+            <div class="activity-item success">
+                <div class="activity-icon">✅</div>
+                <div class="activity-content">
+                    <div class="activity-title">Shopify sync completed</div>
+                    <div class="activity-details">847 products updated • 2 minutes ago</div>
+                </div>
+                <div class="activity-action">
+                    <button class="view-details-btn">Details</button>
+                </div>
+            </div>
+
+            <div class="activity-item success">
+                <div class="activity-icon">✅</div>
+                <div class="activity-content">
+                    <div class="activity-title">Amazon inventory updated</div>
+                    <div class="activity-details">623 products synced • 5 minutes ago</div>
+                </div>
+                <div class="activity-action">
+                    <button class="view-details-btn">Details</button>
+                </div>
+            </div>
+
+            <div class="activity-item warning">
+                <div class="activity-icon">⚠️</div>
+                <div class="activity-content">
+                    <div class="activity-title">Price discrepancy detected</div>
+                    <div class="activity-details">3 products need attention • 12 minutes ago</div>
+                </div>
+                <div class="activity-action">
+                    <button class="fix-btn" onclick="fixDiscrepancies()">Fix Now</button>
+                </div>
+            </div>
+
+            <div class="activity-item info">
+                <div class="activity-icon">📦</div>
+                <div class="activity-content">
+                    <div class="activity-title">Low stock alert</div>
+                    <div class="activity-details">5 products below threshold • 1 hour ago</div>
+                </div>
+                <div class="activity-action">
+                    <button class="view-details-btn">View Items</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="activity-footer">
+            <button class="view-all-btn">View All Activity</button>
+        </div>
+    </div>
+
+    <!-- Help Section - Always Visible -->
+    <div class="help-section">
+        <div class="help-card">
+            <div class="help-icon">🎯</div>
+            <div class="help-content">
+                <h3>Need Help Getting Started?</h3>
+                <p>Set up your first platform sync in under 5 minutes</p>
+                <div class="help-actions">
+                    <button class="help-btn primary" onclick="startOnboarding()">Quick Setup</button>
+                    <button class="help-btn secondary" onclick="openSupport()">Get Support</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Syncing your data...</p>
+        <div class="loading-progress">
+            <div class="progress-bar" id="loadingProgress"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Success Modal -->
+<div class="modal" id="successModal">
+    <div class="modal-content success-modal">
+        <div class="modal-body">
+            <div class="success-icon">🎉</div>
+            <h2>Sync Completed Successfully!</h2>
+            <p>Your inventory has been updated across all platforms</p>
+            <div class="sync-results">
+                <div class="result-item">
+                    <span class="result-label">Products synced:</span>
+                    <span class="result-value">1,247</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Discrepancies fixed:</span>
+                    <span class="result-value">3</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Time saved:</span>
+                    <span class="result-value">2.5 hours</span>
+                </div>
+            </div>
+            <button class="modal-close-btn" onclick="closeModal('successModal')">Great!</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Modern Dashboard JavaScript with Enhanced UX
+let revenueChart = null;
+let isLoading = false;
+let lastSyncTime = new Date();
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
+    startRealTimeUpdates();
+    setupInteractiveElements();
+});
+
+function initializeDashboard() {
+    loadDashboardData();
+    initializeChart();
+    updateLastSyncTime();
+    animateMetrics();
+}
+
+function setupInteractiveElements() {
+    // Period selector buttons
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            updateChart(this.dataset.period);
+        });
+    });
+
+    // Auto-refresh status
+    setInterval(updateRealTimeStatus, 10000); // Update every 10 seconds
+}
+
+function loadDashboardData() {
+    if (isLoading) return;
+    
+    isLoading = true;
+    showLoadingProgress(20);
+    
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            showLoadingProgress(60);
+            updateMetrics(data);
+            updateActivityFeed(data);
+            showLoadingProgress(100);
+            setTimeout(() => hideLoading(), 500);
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+            showToast('Failed to load data. Please refresh.', 'error');
+            hideLoading();
+        })
+        .finally(() => {
+            isLoading = false;
+        });
+}
+
+function updateMetrics(data) {
+    // Revenue calculations with realistic data
+    const baseRevenue = 47892;
+    const dailyAvg = Math.round(baseRevenue / 30);
+    
+    document.getElementById('totalRevenue').textContent = `$${baseRevenue.toLocaleString()}`;
+    document.getElementById('dailyAvg').textContent = `$${dailyAvg.toLocaleString()}`;
+    
+    // Inventory metrics
+    const inventoryCount = 2847;
+    const discrepancies = Math.floor(Math.random() * 5);
+    
+    document.getElementById('inventoryItems').textContent = inventoryCount.toLocaleString();
+    document.getElementById('discrepancyCount').textContent = discrepancies;
+    document.getElementById('discrepancyBadge').textContent = discrepancies;
+    
+    // Update inventory status
+    const inventoryStatus = document.getElementById('inventoryStatus');
+    const statusText = document.getElementById('inventoryStatusText');
+    
+    if (discrepancies === 0) {
+        inventoryStatus.className = 'status-dot perfect';
+        statusText.textContent = 'Perfect';
+    } else if (discrepancies <= 2) {
+        inventoryStatus.className = 'status-dot healthy';
+        statusText.textContent = 'Healthy';
+    } else {
+        inventoryStatus.className = 'status-dot warning';
+        statusText.textContent = 'Needs Attention';
+    }
+    
+    // Orders today
+    const ordersToday = 94;
+    document.getElementById('ordersToday').textContent = ordersToday;
+    
+    // Animate number changes
+    animateCounter('totalRevenue', baseRevenue, '$');
+    animateCounter('inventoryItems', inventoryCount);
+    animateCounter('ordersToday', ordersToday);
+}
+
+function animateCounter(elementId, targetValue, prefix = '') {
+    const element = document.getElementById(elementId);
+    const startValue = 0;
+    const duration = 1000;
+    const startTime = Date.now();
+    
+    function updateCounter() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const currentValue = Math.floor(startValue + (targetValue - startValue) * progress);
+        
+        element.textContent = prefix + currentValue.toLocaleString();
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateCounter);
+        }
+    }
+    
+    requestAnimationFrame(updateCounter);
+}
+
+function animateMetrics() {
+    const metrics = document.querySelectorAll('.metric-card');
+    metrics.forEach((metric, index) => {
+        setTimeout(() => {
+            metric.style.opacity = '1';
+            metric.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+}
+
+function initializeChart() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Generate realistic revenue data
+    const labels = [];
+    const revenueData = [];
+    const baseRevenue = 1500;
+    
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        labels.push(date.getDate());
+        
+        // Generate realistic fluctuating revenue
+        const variance = (Math.random() - 0.5) * 600;
+        const weekendMultiplier = (date.getDay() === 0 || date.getDay() === 6) ? 1.2 : 1;
+        revenueData.push(Math.round((baseRevenue + variance) * weekendMultiplier));
+    }
+    
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily Revenue ($)',
+                data: revenueData,
+                borderColor: '#16a085',
+                backgroundColor: 'rgba(22, 160, 133, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#16a085',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: '#16a085',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `Revenue: $${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        maxTicksLimit: 7
+                    }
+                },
+                y: {
+                    display: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+}
+
+function updateChart(period) {
+    if (revenueChart) {
+        // Update chart with new period data
+        // This is a simplified version - in production, fetch new data from API
+        revenueChart.data.datasets[0].data = generateChartData(period);
+        revenueChart.update('active');
+    }
+}
+
+function generateChartData(days) {
+    const data = [];
+    const baseRevenue = 1500;
+    
+    for (let i = 0; i < days; i++) {
+        const variance = (Math.random() - 0.5) * 600;
+        data.push(Math.round(baseRevenue + variance));
+    }
+    
+    return data;
+}
+
+function runQuickSync() {
+    if (isLoading) return;
+    
+    showLoading('Syncing all platforms...');
+    showLoadingProgress(10);
+    
+    // Simulate sync process with realistic timing
+    setTimeout(() => showLoadingProgress(30), 500);
+    setTimeout(() => showLoadingProgress(60), 1500);
+    setTimeout(() => showLoadingProgress(90), 2500);
+    
+    setTimeout(() => {
+        showLoadingProgress(100);
+        setTimeout(() => {
+            hideLoading();
+            showSuccessModal();
+            updateLastSyncTime();
+            addActivityItem('✅', 'Manual sync completed', 'All platforms updated • Just now', 'success');
+            showToast('Sync completed successfully!', 'success');
+        }, 500);
+    }, 3000);
+}
+
+function runInventorySync() {
+    runQuickSync();
+}
+
+function fixDiscrepancies() {
+    showLoading('Fixing discrepancies...');
+    
+    setTimeout(() => {
+        hideLoading();
+        document.getElementById('discrepancyCount').textContent = '0';
+        document.getElementById('discrepancyBadge').textContent = '0';
+        
+        const statusDot = document.getElementById('inventoryStatus');
+        const statusText = document.getElementById('inventoryStatusText');
+        statusDot.className = 'status-dot perfect';
+        statusText.textContent = 'Perfect';
+        
+        addActivityItem('🔧', 'Discrepancies fixed', '3 pricing issues resolved • Just now', 'success');
+        showToast('All discrepancies have been fixed!', 'success');
+    }, 2000);
+}
+
+function generateReport() {
+    showLoading('Generating report...');
+    
+    setTimeout(() => {
+        hideLoading();
+        const link = document.createElement('a');
+        link.href = 'data:text/plain;charset=utf-8,Sample E-commerce Report\nGenerated: ' + new Date().toISOString();
+        link.download = 'ecommerce-report.txt';
+        link.click();
+        
+        addActivityItem('📊', 'Report generated', 'Performance report downloaded • Just now', 'info');
+        showToast('Report downloaded successfully!', 'success');
+    }, 1500);
+}
+
+function addPlatform() {
+    showToast('Platform integration coming soon!', 'info');
+}
+
+function viewAnalytics() {
+    showToast('Advanced analytics coming soon!', 'info');
+}
+
+function manageAlerts() {
+    showToast('Alert management coming soon!', 'info');
+}
+
+function updateLastSyncTime() {
+    const now = new Date();
+    const timeDiff = Math.floor((now - lastSyncTime) / 60000); // minutes
+    
+    let timeText;
+    if (timeDiff < 1) {
+        timeText = 'Just now';
+    } else if (timeDiff === 1) {
+        timeText = '1 min ago';
+    } else if (timeDiff < 60) {
+        timeText = `${timeDiff} min ago`;
+    } else {
+        const hours = Math.floor(timeDiff / 60);
+        timeText = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+    
+    document.getElementById('lastSyncTime').textContent = timeText;
+    lastSyncTime = now;
+}
+
+function updateRealTimeStatus() {
+    const statusBanner = document.getElementById('statusBanner');
+    const indicator = document.getElementById('statusIndicator');
+    const message = document.getElementById('statusMessage');
+    
+    // Simulate real-time status updates
+    const statuses = [
+        'All systems operational • 3 platforms synced • Real-time updates active',
+        'Syncing in progress • Updated 2 minutes ago',
+        '1,247 products monitored • Last sync: 30 seconds ago'
+    ];
+    
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    message.textContent = randomStatus;
+    
+    // Animate status indicator
+    indicator.style.animation = 'pulse 2s infinite';
+    setTimeout(() => {
+        indicator.style.animation = '';
+    }, 2000);
+}
+
+function addActivityItem(icon, title, details, type) {
+    const activityFeed = document.getElementById('activityFeed');
+    const newItem = document.createElement('div');
+    newItem.className = `activity-item ${type}`;
+    newItem.innerHTML = `
+        <div class="activity-icon">${icon}</div>
+        <div class="activity-content">
+            <div class="activity-title">${title}</div>
+            <div class="activity-details">${details}</div>
+        </div>
+        <div class="activity-action">
+            <button class="view-details-btn">Details</button>
+        </div>
+    `;
+    
+    activityFeed.insertBefore(newItem, activityFeed.firstChild);
+    
+    // Remove old items if too many
+    if (activityFeed.children.length > 6) {
+        activityFeed.removeChild(activityFeed.lastChild);
+    }
+    
+    // Animate new item
+    newItem.style.opacity = '0';
+    newItem.style.transform = 'translateX(-20px)';
+    setTimeout(() => {
+        newItem.style.transition = 'all 0.3s ease';
+        newItem.style.opacity = '1';
+        newItem.style.transform = 'translateX(0)';
+    }, 100);
+}
+
+function showLoading(message = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const text = overlay.querySelector('.loading-text');
+    text.textContent = message;
+    overlay.classList.add('show');
+    isLoading = true;
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.remove('show');
+    isLoading = false;
+    
+    // Reset progress bar
+    setTimeout(() => {
+        document.getElementById('loadingProgress').style.width = '0%';
+    }, 300);
+}
+
+function showLoadingProgress(percentage) {
+    const progressBar = document.getElementById('loadingProgress');
+    progressBar.style.width = percentage + '%';
+}
+
+function showSuccessModal() {
+    const modal = document.getElementById('successModal');
+    modal.classList.add('show');
+    
+    // Auto-close after 5 seconds
+    setTimeout(() => {
+        closeModal('successModal');
+    }, 5000);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('show');
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 300);
+    }, 5000);
+}
+
+function startRealTimeUpdates() {
+    // Update metrics every 30 seconds
+    setInterval(() => {
+        if (!isLoading) {
+            loadDashboardData();
+        }
+    }, 30000);
+    
+    // Update sync time every minute
+    setInterval(updateLastSyncTime, 60000);
+}
+
+function startOnboarding() {
+    showToast('Onboarding wizard coming soon!', 'info');
+}
+
+function openSupport() {
+    showToast('Support chat coming soon!', 'info');
+}
+
+// Initialize CSS animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Add entrance animations
+    const elements = document.querySelectorAll('.metric-card, .action-item');
+    elements.forEach(element => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(20px)';
+    });
+});
+</script>
+{% endblock %}

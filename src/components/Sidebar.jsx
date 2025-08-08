@@ -1,0 +1,159 @@
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  BarChart3,
+  FileText,
+  Settings,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Store
+} from 'lucide-react'
+
+const Sidebar = () => {
+  const [collapsed, setCollapsed] = useState(false)
+
+  const navItems = [
+    {
+      name: 'Dashboard',
+      href: '/',
+      icon: BarChart3,
+      exact: true
+    },
+    {
+      name: 'Reports',
+      href: '/reports',
+      icon: FileText
+    },
+    {
+      name: 'Jobs',
+      href: '/jobs',
+      icon: Clock
+    },
+    {
+      name: 'Settings',
+      href: '/config',
+      icon: Settings
+    }
+  ]
+
+  return (
+    <motion.aside
+      initial={false}
+      animate={{ width: collapsed ? 80 : 280 }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      className="h-screen bg-white/95 backdrop-blur-lg border-r border-white/20 shadow-xl sticky top-0"
+    >
+      <div className="flex flex-col h-full">
+        {/* Brand */}
+        <div className="flex items-center justify-between p-6 border-b border-neutral-200/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Store className="w-6 h-6 text-white" />
+            </div>
+            {!collapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex flex-col"
+              >
+                <span className="text-lg font-bold text-neutral-800">E-commerce Hub</span>
+                <span className="text-sm text-neutral-600">Data Automation</span>
+              </motion.div>
+            )}
+          </div>
+          
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          >
+            {collapsed ? (
+              <ChevronRight className="w-5 h-5 text-neutral-600" />
+            ) : (
+              <ChevronLeft className="w-5 h-5 text-neutral-600" />
+            )}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6">
+          <div className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  end={item.exact}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/25'
+                        : 'text-neutral-700 hover:bg-primary-50 hover:text-primary-700'
+                    }`
+                  }
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {!collapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                    >
+                      {item.name}
+                    </motion.span>
+                  )}
+                </NavLink>
+              )
+            })}
+          </div>
+        </nav>
+
+        {/* Platform Status */}
+        {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="p-4 m-4 bg-gradient-to-r from-success-50 to-primary-50 rounded-xl border border-success-200/50"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-neutral-800">Platform Status</span>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
+                <span className="text-xs text-success-700 font-medium">All Online</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-success-500 rounded-full" title="Shopify" />
+              <div className="w-3 h-3 bg-success-500 rounded-full" title="Amazon" />
+              <div className="w-3 h-3 bg-success-500 rounded-full" title="eBay" />
+              <div className="w-3 h-3 bg-success-500 rounded-full" title="WooCommerce" />
+              <div className="w-3 h-3 bg-success-500 rounded-full" title="Etsy" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Footer */}
+        <div className="p-4 border-t border-neutral-200/50">
+          <div className="text-center">
+            {!collapsed && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-xs text-neutral-500"
+              >
+                v1.0.0 • Premium Dashboard
+              </motion.p>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.aside>
+  )
+}
+
+export default Sidebar

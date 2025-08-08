@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Data Automation Bot{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234F46E5'><path d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'/></svg>">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="nav-title">Data Automation Bot</span>
+            </div>
+            
+            <div class="nav-menu" id="navMenu">
+                <a href="/" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <svg class="nav-link-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586l-5.293 5.293a1 1 0 01-1.414 0L9 6.586 3.707 11.879A1 1 0 013 11V4z"/>
+                        <path d="M3 13.414V20a1 1 0 001 1h5a1 1 0 001-1v-5a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 001 1h5a1 1 0 001-1v-6.586l-5.293-5.293a1 1 0 00-1.414 0L9 13.414 3.707 8.121A1 1 0 003 8.707v4.707z"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/reports" class="nav-link {% if request.endpoint == 'reports_page' %}active{% endif %}">
+                    <svg class="nav-link-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 2a1 1 0 000 2h8a1 1 0 100-2H8z"/>
+                        <path d="M3 6a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm3 4a1 1 0 011-1h10a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H7a1 1 0 01-1-1z"/>
+                    </svg>
+                    Reports
+                </a>
+                <a href="/jobs" class="nav-link {% if request.endpoint == 'jobs_page' %}active{% endif %}">
+                    <svg class="nav-link-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Jobs
+                </a>
+                <a href="/config" class="nav-link {% if request.endpoint == 'config_page' %}active{% endif %}">
+                    <svg class="nav-link-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Config
+                </a>
+            </div>
+            
+            <div class="nav-toggle" id="navToggle">
+                <span class="nav-toggle-line"></span>
+                <span class="nav-toggle-line"></span>
+                <span class="nav-toggle-line"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 Data Automation Bot. Built with modern web technologies.</p>
+        </div>
+    </footer>
+
+    <!-- Loading Spinner -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

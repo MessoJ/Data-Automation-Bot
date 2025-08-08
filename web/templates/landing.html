@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<section class="landing-hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <h1>Unify Your E‑commerce Data. Automate Everything.</h1>
+      <p>Sync inventory, monitor prices, and surface actionable insights across Shopify, Amazon, eBay and more.</p>
+      <div class="hero-cta">
+        <a href="/web/" class="premium-btn primary">Go to Dashboard</a>
+        <a href="/onboarding" class="premium-btn secondary">Start Onboarding</a>
+      </div>
+      <ul class="hero-bullets">
+        <li>Real‑time inventory sync</li>
+        <li>Price discrepancy alerts</li>
+        <li>Revenue and product performance analytics</li>
+      </ul>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="mock-card">
+        <div class="mock-title">Today’s Overview</div>
+        <div class="mock-stats">
+          <div><span>Revenue</span><strong>$8,420</strong></div>
+          <div><span>Orders</span><strong>213</strong></div>
+          <div><span>Alerts</span><strong>3</strong></div>
+        </div>
+        <div class="mock-chart"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.landing-hero {
+  padding: var(--space-12) var(--space-6);
+  background: linear-gradient(135deg, var(--neutral-50), var(--bg-primary));
+}
+.hero-inner { 
+  max-width: 1200px; margin: 0 auto; display: grid; gap: var(--space-10);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: center;
+}
+.hero-copy h1 { font-size: clamp(2rem, 3vw, 3rem); line-height: 1.1; color: var(--neutral-900); margin-bottom: var(--space-4); }
+.hero-copy p { font-size: 1.125rem; color: var(--neutral-600); margin-bottom: var(--space-6); }
+.hero-cta { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+.hero-bullets { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); color: var(--neutral-700); }
+.hero-bullets li { position: relative; padding-left: 1.25rem; }
+.hero-bullets li::before { content: '✓'; position: absolute; left: 0; color: var(--primary-color); font-weight: 700; }
+.hero-visual .mock-card { background: var(--bg-primary); border: 1px solid var(--neutral-200); border-radius: var(--radius-2xl); padding: var(--space-6); box-shadow: var(--shadow-lg); }
+.mock-title { font-weight: var(--font-bold); color: var(--neutral-800); margin-bottom: var(--space-4); }
+.mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6); }
+.mock-stats span { color: var(--neutral-500); font-size: .85rem; }
+.mock-stats strong { color: var(--neutral-900); font-size: 1.25rem; }
+.mock-chart { height: 140px; background: linear-gradient(180deg, rgba(22,160,133,.2), transparent); border-radius: var(--radius-lg); }
+@media (max-width: 768px) { .hero-cta { justify-content: center; } }
+</style>
+{% endblock %}
+

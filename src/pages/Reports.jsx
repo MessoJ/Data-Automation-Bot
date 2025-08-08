@@ -1,0 +1,321 @@
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { 
+  FileText, 
+  Download, 
+  Plus, 
+  Calendar,
+  TrendingUp,
+  BarChart3,
+  FileSpreadsheet,
+  Eye,
+  Filter
+} from 'lucide-react'
+import axios from 'axios'
+import toast from 'react-hot-toast'
+
+const Reports = () => {
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [filterType, setFilterType] = useState('all')
+
+  useEffect(() => {
+    loadReports()
+  }, [])
+
+  const loadReports = async () => {
+    try {
+      const response = await axios.get('/api/reports')
+      setReports(response.data.reports || [])
+    } catch (error) {
+      toast.error('Failed to load reports')
+      console.error('Error loading reports:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateReport = async (reportType, format) => {
+    setGenerating(true)
+    try {
+      const response = await axios.post('/api/reports/generate', {
+        report_type: reportType,
+        format: format
+      })
+      
+      toast.success(`${reportType} report generated successfully!`)
+      loadReports() // Refresh the list
+    } catch (error) {
+      toast.error('Failed to generate report')
+      console.error('Error generating report:', error)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const downloadReport = async (filename) => {
+    try {
+      const response = await axios.get(`/api/reports/download/${filename}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      
+      toast.success('Report downloaded successfully!')
+    } catch (error) {
+      toast.error('Failed to download report')
+      console.error('Error downloading report:', error)
+    }
+  }
+
+  const getFileIcon = (filename) => {
+    if (filename.endsWith('.csv')) return <FileSpreadsheet className="w-5 h-5 text-success-500" />
+    if (filename.endsWith('.html')) return <Eye className="w-5 h-5 text-info-500" />
+    if (filename.endsWith('.json')) return <FileText className="w-5 h-5 text-warning-500" />
+    return <FileText className="w-5 h-5 text-neutral-500" />
+  }
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const reportTypes = [
+    {
+      id: 'daily',
+      name: 'Daily Summary',
+      description: 'Complete overview of today\'s performance',
+      icon: Calendar,
+      color: 'from-blue-500 to-blue-600'
+    },
+    {
+      id: 'weekly',
+      name: 'Weekly Analysis',
+      description: 'Week-over-week performance trends',
+      icon: TrendingUp,
+      color: 'from-green-500 to-green-600'
+    },
+    {
+      id: 'inventory',
+      name: 'Inventory Report',
+      description: 'Current stock levels and alerts',
+      icon: BarChart3,
+      color: 'from-purple-500 to-purple-600'
+    }
+  ]
+
+  const formats = ['csv', 'json', 'html']
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-info-500 to-info-600 rounded-xl flex items-center justify-center">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-800">Reports & Analytics</h1>
+            <p className="text-neutral-600">Generate and manage your e-commerce reports</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Quick Generate Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="card"
+      >
+        <h2 className="text-xl font-bold text-neutral-800 mb-6">Generate New Report</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {reportTypes.map((reportType) => {
+            const Icon = reportType.icon
+            return (
+              <div key={reportType.id} className="relative group">
+                <div className="p-6 bg-neutral-50 rounded-xl border border-neutral-200 hover:border-primary-300 transition-colors">
+                  <div className={`w-12 h-12 bg-gradient-to-r ${reportType.color} rounded-xl flex items-center justify-center mb-4`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  
+                  <h3 className="font-bold text-neutral-800 mb-2">{reportType.name}</h3>
+                  <p className="text-sm text-neutral-600 mb-4">{reportType.description}</p>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {formats.map((format) => (
+                      <button
+                        key={format}
+                        onClick={() => generateReport(reportType.id, format)}
+                        disabled={generating}
+                        className="px-3 py-1 text-xs font-medium bg-white border border-neutral-300 rounded-md hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-colors disabled:opacity-50"
+                      >
+                        {format.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {generating && (
+                  <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-primary-600">
+                      <div className="loading-ring w-5 h-5" />
+                      <span className="text-sm font-medium">Generating...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </motion.section>
+
+      {/* Reports List */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="card"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-neutral-800">Generated Reports</h2>
+          
+          <div className="flex items-center gap-4">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="all">All Formats</option>
+              <option value="csv">CSV Files</option>
+              <option value="html">HTML Files</option>
+              <option value="json">JSON Files</option>
+            </select>
+            
+            <button
+              onClick={loadReports}
+              className="p-2 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+            >
+              <Filter className="w-5 h-5 text-neutral-600" />
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="loading-ring w-8 h-8" />
+            <span className="ml-3 text-neutral-600">Loading reports...</span>
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-neutral-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-neutral-800 mb-2">No reports found</h3>
+            <p className="text-neutral-600">Generate your first report to get started</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reports
+              .filter(report => filterType === 'all' || report.filename.endsWith(`.${filterType}`))
+              .map((report, index) => (
+                <motion.div
+                  key={report.filename}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    {getFileIcon(report.filename)}
+                    
+                    <div>
+                      <h4 className="font-medium text-neutral-800">{report.filename}</h4>
+                      <div className="flex items-center gap-4 text-sm text-neutral-600">
+                        <span>{formatFileSize(report.size)}</span>
+                        <span>•</span>
+                        <span>Created {new Date(report.created).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {report.filename.endsWith('.html') && (
+                      <button
+                        onClick={() => window.open(`/api/reports/download/${report.filename}`, '_blank')}
+                        className="p-2 text-info-600 hover:bg-info-100 rounded-lg transition-colors"
+                        title="Preview"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => downloadReport(report.filename)}
+                      className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+          </div>
+        )}
+      </motion.section>
+
+      {/* Analytics Summary */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="card text-center">
+          <div className="w-12 h-12 bg-gradient-to-r from-success-500 to-success-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-neutral-800 mb-1">{reports.length}</h3>
+          <p className="text-neutral-600">Total Reports</p>
+        </div>
+
+        <div className="card text-center">
+          <div className="w-12 h-12 bg-gradient-to-r from-info-500 to-info-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Download className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-neutral-800 mb-1">
+            {reports.reduce((acc, report) => acc + report.size, 0) > 0 ? 
+              formatFileSize(reports.reduce((acc, report) => acc + report.size, 0)) : '0 KB'
+            }
+          </h3>
+          <p className="text-neutral-600">Total Size</p>
+        </div>
+
+        <div className="card text-center">
+          <div className="w-12 h-12 bg-gradient-to-r from-warning-500 to-warning-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-neutral-800 mb-1">Today</h3>
+          <p className="text-neutral-600">Last Generated</p>
+        </div>
+      </motion.section>
+    </div>
+  )
+}
+
+export default Reports

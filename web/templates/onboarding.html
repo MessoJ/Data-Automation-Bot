@@ -1,0 +1,782 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="onboarding-container">
+    <!-- Welcome Screen -->
+    <div class="onboarding-step active" id="step-1">
+        <div class="step-content">
+            <div class="welcome-animation">
+                <div class="welcome-icon" aria-hidden="true">🚀</div>
+                <div class="floating-icons">
+                    <span class="float-icon" style="--delay: 0s;" aria-hidden="true">📈</span>
+                    <span class="float-icon" style="--delay: 0.5s;" aria-hidden="true">⚙️</span>
+                    <span class="float-icon" style="--delay: 1s;" aria-hidden="true">🔄</span>
+                    <span class="float-icon" style="--delay: 1.5s;" aria-hidden="true">📦</span>
+                </div>
+            </div>
+            <h1 class="step-title">Welcome to Your E-commerce Command Center!</h1>
+            <p class="step-description">
+                You're about to save 20+ hours per week and increase your revenue by 15-25%. 
+                Let's get your platforms connected in just 3 simple steps.
+            </p>
+            <div class="step-benefits">
+                <div class="benefit-item">
+                    <span class="benefit-icon" aria-hidden="true">⏱️</span>
+                    <span>Real-time inventory sync</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon" aria-hidden="true">🏷️</span>
+                    <span>Automatic price corrections</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-icon" aria-hidden="true">📊</span>
+                    <span>Advanced analytics dashboard</span>
+                </div>
+            </div>
+            <button class="primary-btn" onclick="nextStep()">Let's Get Started!</button>
+        </div>
+    </div>
+
+    <!-- Platform Selection -->
+    <div class="onboarding-step" id="step-2">
+        <div class="step-content">
+            <div class="step-header">
+                <h2 class="step-title">Connect Your E-commerce Platforms</h2>
+                <p class="step-description">Select the platforms you want to sync. You can always add more later.</p>
+            </div>
+            
+            <div class="platforms-grid">
+                <div class="platform-card" data-platform="shopify">
+                    <div class="platform-icon shopify-icon" aria-hidden="true">🛍️</div>
+                    <h3 class="platform-name">Shopify</h3>
+                    <p class="platform-desc">Sync your online store inventory and orders</p>
+                    <div class="platform-status">
+                        <span class="status-text">Click to connect</span>
+                        <div class="connection-indicator"></div>
+                    </div>
+                </div>
+
+                <div class="platform-card" data-platform="amazon">
+                    <div class="platform-icon amazon-icon" aria-hidden="true">🅰️</div>
+                    <h3 class="platform-name">Amazon</h3>
+                    <p class="platform-desc">Manage your Amazon seller inventory</p>
+                    <div class="platform-status">
+                        <span class="status-text">Click to connect</span>
+                        <div class="connection-indicator"></div>
+                    </div>
+                </div>
+
+                <div class="platform-card" data-platform="ebay">
+                    <div class="platform-icon ebay-icon" aria-hidden="true">🛒</div>
+                    <h3 class="platform-name">eBay</h3>
+                    <p class="platform-desc">Sync your eBay listings and inventory</p>
+                    <div class="platform-status">
+                        <span class="status-text">Click to connect</span>
+                        <div class="connection-indicator"></div>
+                    </div>
+                </div>
+
+                <div class="platform-card" data-platform="woocommerce">
+                    <div class="platform-icon woo-icon" aria-hidden="true">🌐</div>
+                    <h3 class="platform-name">WooCommerce</h3>
+                    <p class="platform-desc">Connect your WordPress store</p>
+                    <div class="platform-status">
+                        <span class="status-text">Click to connect</span>
+                        <div class="connection-indicator"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="secondary-btn" onclick="prevStep()">Back</button>
+                <button class="primary-btn" onclick="nextStep()" id="continueBtn" disabled>
+                    Continue with <span id="selectedCount">0</span> Platform<span id="platformPlural">s</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success & Dashboard Preview -->
+    <div class="onboarding-step" id="step-3">
+        <div class="step-content">
+            <div class="success-animation">
+                <div class="success-icon" aria-hidden="true">✅</div>
+                <div class="success-particles">
+                    <span class="particle"></span>
+                    <span class="particle"></span>
+                    <span class="particle"></span>
+                    <span class="particle"></span>
+                </div>
+            </div>
+            <h2 class="step-title">You're All Set!</h2>
+            <p class="step-description">
+                Your platforms are connected and syncing. Here's what you can expect:
+            </p>
+            
+            <div class="expectations-grid">
+                <div class="expectation-item">
+                    <div class="expectation-icon" aria-hidden="true">🔁</div>
+                    <div class="expectation-content">
+                        <h4>Automatic Syncing</h4>
+                        <p>Your inventory updates every 15 minutes across all platforms</p>
+                    </div>
+                </div>
+                
+                <div class="expectation-item">
+                    <div class="expectation-icon" aria-hidden="true">🔔</div>
+                    <div class="expectation-content">
+                        <h4>Smart Alerts</h4>
+                        <p>Get notified instantly when discrepancies are found</p>
+                    </div>
+                </div>
+                
+                <div class="expectation-item">
+                    <div class="expectation-icon" aria-hidden="true">📈</div>
+                    <div class="expectation-content">
+                        <h4>Performance Insights</h4>
+                        <p>Track revenue and identify your best-performing products</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="primary-btn large-btn" onclick="goToDashboard()">
+                    <span>Go to Dashboard</span>
+                    <span class="btn-icon" aria-hidden="true">➡️</span>
+                </button>
+            </div>
+
+            <div class="help-section">
+                <p class="help-text">Need help getting started?</p>
+                <div class="help-actions">
+                    <button class="help-btn" onclick="openSupport()">💬 Contact Support</button>
+                    <button class="help-btn" onclick="openGuide()">📘 View Guide</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+        <div class="progress-steps">
+            <div class="progress-step active" data-step="1">
+                <div class="step-circle">1</div>
+                <span class="step-label">Welcome</span>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="step-circle">2</div>
+                <span class="step-label">Connect</span>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="step-circle">3</div>
+                <span class="step-label">Complete</span>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Onboarding Styles */
+.onboarding-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    position: relative;
+}
+
+.onboarding-step {
+    display: none;
+    max-width: 800px;
+    width: 100%;
+    background: var(--bg-primary);
+    border-radius: var(--radius-3xl);
+    padding: var(--space-12);
+    box-shadow: var(--shadow-2xl);
+    border: 1px solid var(--gray-200);
+    text-align: center;
+    animation: slideIn 0.6s ease-out;
+}
+
+.onboarding-step.active {
+    display: block;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Welcome Animation */
+.welcome-animation {
+    position: relative;
+    margin-bottom: var(--space-8);
+}
+
+.welcome-icon {
+    font-size: 5rem;
+    margin-bottom: var(--space-4);
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.floating-icons {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 200px;
+    pointer-events: none;
+}
+
+.float-icon {
+    position: absolute;
+    font-size: 1.5rem;
+    animation: float 3s ease-in-out infinite;
+    animation-delay: var(--delay);
+}
+
+.float-icon:nth-child(1) { top: 20%; left: 20%; }
+.float-icon:nth-child(2) { top: 20%; right: 20%; }
+.float-icon:nth-child(3) { bottom: 20%; left: 20%; }
+.float-icon:nth-child(4) { bottom: 20%; right: 20%; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.step-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    line-height: 1.2;
+}
+
+.step-description {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-8);
+    line-height: 1.6;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.step-benefits {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.benefit-icon {
+    font-size: 1.2rem;
+}
+
+/* Platform Selection */
+.platforms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+}
+
+.platform-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+}
+
+.platform-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.platform-card.selected {
+    border-color: var(--primary-color);
+    background: rgba(22, 160, 133, 0.05);
+}
+
+.platform-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto var(--space-4);
+    background: var(--primary-gradient);
+}
+
+.platform-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.platform-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-4);
+}
+
+.platform-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.connection-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--gray-400);
+    transition: all var(--transition-normal);
+}
+
+.platform-card.selected .connection-indicator {
+    background: var(--success-color);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Success Animation */
+.success-animation {
+    position: relative;
+    margin-bottom: var(--space-8);
+}
+
+.success-icon {
+    font-size: 5rem;
+    animation: successBounce 0.6s ease-out;
+}
+
+.success-particles {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--primary-color);
+    border-radius: var(--radius-full);
+    animation: explode 1s ease-out;
+}
+
+.particle:nth-child(1) { animation-delay: 0.1s; }
+.particle:nth-child(2) { animation-delay: 0.2s; }
+.particle:nth-child(3) { animation-delay: 0.3s; }
+.particle:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes explode {
+    0% { transform: scale(0) translate(0, 0); opacity: 1; }
+    100% { transform: scale(1) translate(100px, 100px); opacity: 0; }
+}
+
+@keyframes successBounce {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.expectations-grid {
+    display: grid;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+    text-align: left;
+}
+
+.expectation-item {
+    display: flex;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--gray-200);
+}
+
+.expectation-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-xl);
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.expectation-content h4 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+}
+
+.expectation-content p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Buttons */
+.primary-btn,
+.secondary-btn,
+.help-btn {
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-xl);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.primary-btn {
+    background: var(--primary-gradient);
+    color: var(--text-white);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+}
+
+.primary-btn:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.large-btn {
+    padding: var(--space-5) var(--space-12);
+    font-size: 1.125rem;
+}
+
+.secondary-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--gray-300);
+}
+
+.secondary-btn:hover {
+    background: var(--gray-200);
+    color: var(--text-primary);
+}
+
+.help-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.875rem;
+    border: 1px solid var(--gray-300);
+}
+
+.help-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.step-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.help-section {
+    border-top: 1px solid var(--gray-200);
+    padding-top: var(--space-6);
+}
+
+.help-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-4);
+}
+
+.help-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+/* Progress Indicator */
+.progress-indicator {
+    position: fixed;
+    bottom: var(--space-8);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--z-fixed);
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-8);
+    margin-bottom: var(--space-4);
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--gray-300);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    transition: all var(--transition-normal);
+}
+
+.progress-step.active .step-circle {
+    background: var(--primary-color);
+    color: var(--text-white);
+}
+
+.progress-step.completed .step-circle {
+    background: var(--success-color);
+    color: var(--text-white);
+}
+
+.step-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.progress-bar {
+    width: 200px;
+    height: 4px;
+    background: var(--gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-slow);
+    width: 33%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .onboarding-container {
+        padding: var(--space-4);
+    }
+    
+    .onboarding-step {
+        padding: var(--space-8);
+    }
+    
+    .step-title {
+        font-size: 2rem;
+    }
+    
+    .platforms-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .step-actions {
+        flex-direction: column;
+    }
+    
+    .progress-steps {
+        gap: var(--space-4);
+    }
+    
+    .progress-bar {
+        width: 150px;
+    }
+    
+    .help-actions {
+        flex-direction: column;
+    }
+    
+    .step-benefits {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+}
+</style>
+
+<script>
+let currentStep = 1;
+let selectedPlatforms = [];
+
+// Platform connection simulation
+document.addEventListener('DOMContentLoaded', function() {
+    setupPlatformCards();
+    updateProgress();
+});
+
+function setupPlatformCards() {
+    document.querySelectorAll('.platform-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const platform = this.dataset.platform;
+            
+            if (this.classList.contains('selected')) {
+                // Deselect platform
+                this.classList.remove('selected');
+                this.querySelector('.status-text').textContent = 'Click to connect';
+                selectedPlatforms = selectedPlatforms.filter(p => p !== platform);
+            } else {
+                // Select platform
+                this.classList.add('selected');
+                this.querySelector('.status-text').textContent = 'Connected';
+                selectedPlatforms.push(platform);
+            }
+            
+            updateContinueButton();
+        });
+    });
+}
+
+function updateContinueButton() {
+    const continueBtn = document.getElementById('continueBtn');
+    const selectedCount = document.getElementById('selectedCount');
+    const platformPlural = document.getElementById('platformPlural');
+    
+    selectedCount.textContent = selectedPlatforms.length;
+    platformPlural.textContent = selectedPlatforms.length === 1 ? '' : 's';
+    
+    if (selectedPlatforms.length > 0) {
+        continueBtn.disabled = false;
+        continueBtn.textContent = `Continue with ${selectedPlatforms.length} Platform${selectedPlatforms.length === 1 ? '' : 's'}`;
+    } else {
+        continueBtn.disabled = true;
+        continueBtn.innerHTML = 'Select at least one platform';
+    }
+}
+
+function nextStep() {
+    if (currentStep < 3) {
+        // Hide current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        
+        // Show next step
+        currentStep++;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        
+        // Update progress
+        updateProgress();
+        
+        // Special handling for step 3
+        if (currentStep === 3) {
+            setTimeout(simulateConnection, 1000);
+        }
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        // Hide current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        
+        // Show previous step
+        currentStep--;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        
+        // Update progress
+        updateProgress();
+    }
+}
+
+function updateProgress() {
+    const progressFill = document.getElementById('progressFill');
+    const progressSteps = document.querySelectorAll('.progress-step');
+    
+    // Update progress bar
+    const percentage = ((currentStep - 1) / 2) * 100;
+    progressFill.style.width = percentage + '%';
+    
+    // Update progress steps
+    progressSteps.forEach((step, index) => {
+        const stepNumber = index + 1;
+        if (stepNumber < currentStep) {
+            step.classList.add('completed');
+            step.classList.remove('active');
+        } else if (stepNumber === currentStep) {
+            step.classList.add('active');
+            step.classList.remove('completed');
+        } else {
+            step.classList.remove('active', 'completed');
+        }
+    });
+}
+
+function simulateConnection() {
+    // Simulate platform connection process
+    showGlobalToast('Connecting platforms...', 'info');
+    
+    setTimeout(() => {
+        showGlobalToast(`Successfully connected ${selectedPlatforms.length} platform${selectedPlatforms.length === 1 ? '' : 's'}!`, 'success');
+    }, 2000);
+}
+
+function goToDashboard() {
+    showGlobalToast('Redirecting to your dashboard...', 'success');
+    setTimeout(() => {
+        window.location.href = '/web/';
+    }, 1500);
+}
+
+function openSupport() {
+    showGlobalToast('Support chat coming soon!', 'info');
+}
+
+function openGuide() {
+    showGlobalToast('User guide coming soon!', 'info');
+}
+</script>
+{% endblock %}

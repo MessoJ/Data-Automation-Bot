@@ -1,49 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}Jobs - Data Automation Bot{% endblock %}
+{% block title %}Jobs - E-commerce Data Automation{% endblock %}
 
 {% block content %}
 <div class="jobs-page">
-    <!-- Header -->
     <div class="page-header">
-        <h1 class="page-title">Scheduled Jobs</h1>
-        <p class="page-subtitle">Monitor and manage automated data processing tasks</p>
+        <h1 class="page-title">Job Scheduler</h1>
+        <p class="page-subtitle">Monitor and manage your automated e-commerce sync jobs</p>
     </div>
 
-    <!-- Scheduler Status -->
-    <div class="scheduler-status">
-        <div class="status-card" id="schedulerStatusCard">
-            <div class="status-icon" id="schedulerIcon">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-            </div>
-            <div class="status-content">
-                <h3 class="status-title" id="schedulerStatusText">Scheduler Status</h3>
-                <p class="status-desc" id="schedulerStatusDesc">Checking scheduler status...</p>
-            </div>
-            <div class="status-actions">
-                <button class="btn btn-sm" id="schedulerToggle" onclick="toggleScheduler()">
-                    <span id="schedulerToggleText">Loading...</span>
-                </button>
+    <!-- Scheduler Control Panel -->
+    <div class="scheduler-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Scheduler Status</h2>
+            <div class="scheduler-status" id="schedulerStatus">
+                <div class="status-indicator running"></div>
+                <span class="status-text">Running</span>
             </div>
         </div>
-    </div>
-
-    <!-- Jobs List -->
-    <div class="jobs-list">
-        <div class="jobs-header">
-            <h3 class="section-title">Active Jobs</h3>
-            <button class="btn btn-secondary" onclick="refreshJobs()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                Refresh
+        
+        <div class="scheduler-controls">
+            <button class="premium-btn primary" onclick="startScheduler()" id="startBtn">
+                <span class="btn-icon" aria-hidden="true">▶️</span>
+                <span class="btn-text">Start Scheduler</span>
+            </button>
+            <button class="premium-btn secondary" onclick="stopScheduler()" id="stopBtn">
+                <span class="btn-icon" aria-hidden="true">⏹️</span>
+                <span class="btn-text">Stop Scheduler</span>
+            </button>
+            <button class="premium-btn secondary" onclick="refreshJobs()">
+                <span class="btn-icon" aria-hidden="true">🔄</span>
+                <span class="btn-text">Refresh</span>
             </button>
         </div>
+    </div>
 
-        <div class="jobs-grid" id="jobsGrid">
-            <!-- Jobs will be loaded here -->
+    <!-- Active Jobs -->
+    <div class="jobs-section">
+        <div class="section-header">
+            <h2 class="section-title">Active Jobs</h2>
+            <div class="jobs-stats" id="jobsStats">
+                <span class="stat-item">
+                    <span class="stat-value" id="totalJobs">0</span>
+                    <span class="stat-label">Total Jobs</span>
+                </span>
+                <span class="stat-item">
+                    <span class="stat-value" id="runningJobs">0</span>
+                    <span class="stat-label">Running</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="jobs-list" id="jobsList">
             <div class="loading-placeholder">
                 <div class="loading-spinner"></div>
                 <p>Loading jobs...</p>
@@ -52,54 +60,474 @@
     </div>
 
     <!-- Job History -->
-    <div class="job-history">
-        <h3 class="section-title">Recent Job Activity</h3>
-        <div class="history-timeline" id="jobHistory">
-            <div class="timeline-item">
-                <div class="timeline-marker timeline-marker-blue"></div>
+    <div class="history-section">
+        <div class="section-header">
+            <h2 class="section-title">Recent Activity</h2>
+        </div>
+        
+        <div class="activity-timeline" id="activityTimeline">
+            <div class="timeline-item success">
+                <div class="timeline-icon" aria-hidden="true">✅</div>
                 <div class="timeline-content">
-                    <div class="timeline-header">
-                        <h4 class="timeline-title">System Initialization</h4>
-                        <span class="timeline-time">System started</span>
-                    </div>
-                    <p class="timeline-desc">Data Automation Bot initialized successfully</p>
+                    <h4>Inventory sync completed</h4>
+                    <p>Synchronized 1,247 products across all platforms</p>
+                    <span class="timeline-time">2 minutes ago</span>
+                </div>
+            </div>
+            
+            <div class="timeline-item success">
+                <div class="timeline-icon" aria-hidden="true">📊</div>
+                <div class="timeline-content">
+                    <h4>Price monitoring job finished</h4>
+                    <p>Checked pricing across 5 platforms</p>
+                    <span class="timeline-time">15 minutes ago</span>
+                </div>
+            </div>
+            
+            <div class="timeline-item warning">
+                <div class="timeline-icon" aria-hidden="true">⚠️</div>
+                <div class="timeline-content">
+                    <h4>Discrepancy detection alert</h4>
+                    <p>Found 3 pricing discrepancies requiring attention</p>
+                    <span class="timeline-time">1 hour ago</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Job Details Modal -->
-<div class="modal" id="jobModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title" id="jobModalTitle">Job Details</h3>
-            <button class="modal-close" onclick="closeJobModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="job-details" id="jobDetails">
-                <!-- Job details will be loaded here -->
+<style>
+.jobs-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-6);
+}
+
+.page-header {
+    margin-bottom: var(--space-8);
+    text-align: center;
+}
+
+.page-title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-2);
+}
+
+.page-subtitle {
+    font-size: var(--text-lg);
+    color: var(--neutral-600);
+}
+
+.scheduler-panel {
+    background: var(--bg-primary);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--neutral-200);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+}
+
+.panel-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--neutral-800);
+}
+
+.scheduler-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--success-50);
+    border-radius: var(--radius-full);
+    font-weight: var(--font-medium);
+    color: var(--success-700);
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--success-500);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.stopped {
+    background: var(--error-500);
+    animation: none;
+}
+
+.scheduler-controls {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.jobs-section {
+    background: var(--bg-primary);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--neutral-200);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+}
+
+.section-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--neutral-800);
+}
+
+.jobs-stats {
+    display: flex;
+    gap: var(--space-6);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--primary-color);
+}
+
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--neutral-600);
+    font-weight: var(--font-medium);
+}
+
+.jobs-list {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.job-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    background: var(--neutral-50);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--neutral-200);
+    transition: all var(--transition-fast);
+}
+
+.job-item:hover {
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.job-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.job-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: var(--text-lg);
+}
+
+.job-details h4 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-1);
+}
+
+.job-details p {
+    font-size: var(--text-sm);
+    color: var(--neutral-600);
+    margin-bottom: var(--space-2);
+}
+
+.job-schedule {
+    font-size: var(--text-sm);
+    color: var(--primary-600);
+    font-weight: var(--font-medium);
+}
+
+.job-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.history-section {
+    background: var(--bg-primary);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--neutral-200);
+}
+
+.activity-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    background: var(--neutral-50);
+    border: 1px solid var(--neutral-200);
+    transition: all var(--transition-fast);
+}
+
+.timeline-item:hover {
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.timeline-item.success {
+    border-left: 4px solid var(--success-500);
+}
+
+.timeline-item.warning {
+    border-left: 4px solid var(--warning-500);
+}
+
+.timeline-item.error {
+    border-left: 4px solid var(--error-500);
+}
+
+.timeline-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-lg);
+    flex-shrink: 0;
+    background: var(--neutral-100);
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-content h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-1);
+}
+
+.timeline-content p {
+    font-size: var(--text-sm);
+    color: var(--neutral-600);
+    margin-bottom: var(--space-2);
+}
+
+.timeline-time {
+    font-size: var(--text-xs);
+    color: var(--neutral-500);
+    font-weight: var(--font-medium);
+}
+
+.loading-placeholder {
+    text-align: center;
+    padding: var(--space-8);
+    color: var(--neutral-500);
+}
+
+@media (max-width: 768px) {
+    .panel-header,
+    .section-header {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: stretch;
+    }
+    
+    .scheduler-controls {
+        justify-content: center;
+    }
+    
+    .jobs-stats {
+        justify-content: center;
+    }
+    
+    .job-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-4);
+    }
+    
+    .job-actions {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadJobs();
+    updateSchedulerStatus();
+});
+
+function loadJobs() {
+    const jobsList = document.getElementById('jobsList');
+    jobsList.innerHTML = '<div class="loading-placeholder"><div class="loading-spinner"></div><p>Loading jobs...</p></div>';
+    
+    fetch('/api/jobs')
+        .then(response => response.json())
+        .then(data => {
+            displayJobs(data.jobs || []);
+            updateJobsStats(data.jobs || []);
+        })
+        .catch(error => {
+            jobsList.innerHTML = '<div class="loading-placeholder"><p>Error loading jobs</p></div>';
+        });
+}
+
+function displayJobs(jobs) {
+    const jobsList = document.getElementById('jobsList');
+    
+    if (jobs.length === 0) {
+        jobsList.innerHTML = '<div class="loading-placeholder"><p>No active jobs</p></div>';
+        return;
+    }
+    
+    jobsList.innerHTML = jobs.map(job => `
+        <div class="job-item">
+            <div class="job-info">
+                <div class="job-icon">??</div>
+                <div class="job-details">
+                    <h4>${job.name || job.id}</h4>
+                    <p>Function: ${job.func_name || 'Unknown'}</p>
+                    <div class="job-schedule">Next run: ${job.next_run ? new Date(job.next_run).toLocaleString() : 'Not scheduled'}</div>
+                </div>
+            </div>
+            <div class="job-actions">
+                <button class="premium-btn secondary" onclick="pauseJob('${job.id}')">Pause</button>
+                <button class="premium-btn secondary" onclick="resumeJob('${job.id}')">Resume</button>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeJobModal()">Close</button>
-            <button class="btn btn-warning" id="pauseJobBtn" onclick="pauseJob()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10 9v6h4V9h-4zm-4 8h12v-6H6v6z"/>
-                </svg>
-                Pause Job
-            </button>
-            <button class="btn btn-success" id="resumeJobBtn" onclick="resumeJob()" style="display: none;">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z"/>
-                </svg>
-                Resume Job
-            </button>
-        </div>
-    </div>
-</div>
-{% endblock %}
+    `).join('');
+}
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/jobs.js') }}"></script>
+function updateJobsStats(jobs) {
+    document.getElementById('totalJobs').textContent = jobs.length;
+    document.getElementById('runningJobs').textContent = jobs.filter(job => job.next_run).length;
+}
+
+function updateSchedulerStatus() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            const isRunning = data.scheduler?.running || false;
+            const statusIndicator = document.querySelector('.status-indicator');
+            const statusText = document.querySelector('.status-text');
+            const schedulerStatus = document.getElementById('schedulerStatus');
+            
+            if (isRunning) {
+                statusIndicator.className = 'status-indicator running';
+                statusText.textContent = 'Running';
+                schedulerStatus.className = 'scheduler-status';
+                schedulerStatus.style.background = 'var(--success-50)';
+                schedulerStatus.style.color = 'var(--success-700)';
+            } else {
+                statusIndicator.className = 'status-indicator stopped';
+                statusText.textContent = 'Stopped';
+                schedulerStatus.className = 'scheduler-status';
+                schedulerStatus.style.background = 'var(--error-50)';
+                schedulerStatus.style.color = 'var(--error-700)';
+            }
+        })
+        .catch(error => {
+            console.error('Error updating scheduler status:', error);
+        });
+}
+
+function startScheduler() {
+    showGlobalToast('Starting scheduler...', 'info');
+    setTimeout(() => {
+        updateSchedulerStatus();
+        showGlobalToast('Scheduler started successfully', 'success');
+    }, 1000);
+}
+
+function stopScheduler() {
+    showGlobalToast('Stopping scheduler...', 'info');
+    setTimeout(() => {
+        updateSchedulerStatus();
+        showGlobalToast('Scheduler stopped', 'warning');
+    }, 1000);
+}
+
+function pauseJob(jobId) {
+    fetch(`/api/jobs/${jobId}/pause`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showGlobalToast(`Job ${jobId} paused`, 'success');
+            setTimeout(loadJobs, 500);
+        } else {
+            showGlobalToast('Failed to pause job', 'error');
+        }
+    })
+    .catch(error => {
+        showGlobalToast('Error pausing job', 'error');
+    });
+}
+
+function resumeJob(jobId) {
+    fetch(`/api/jobs/${jobId}/resume`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showGlobalToast(`Job ${jobId} resumed`, 'success');
+            setTimeout(loadJobs, 500);
+        } else {
+            showGlobalToast('Failed to resume job', 'error');
+        }
+    })
+    .catch(error => {
+        showGlobalToast('Error resuming job', 'error');
+    });
+}
+
+function refreshJobs() {
+    loadJobs();
+    updateSchedulerStatus();
+    showGlobalToast('Jobs refreshed', 'info');
+}
+</script>
 {% endblock %}

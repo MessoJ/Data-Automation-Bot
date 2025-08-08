@@ -1,0 +1,7 @@
+/* Default theme */
+:root{
+  --theme-accent: #3b82f6;
+}
+.card{border-radius: 8px;background:#fff;}
+.btn-add{background:var(--theme-accent);border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer}
+.btn-add:hover{opacity:.9}

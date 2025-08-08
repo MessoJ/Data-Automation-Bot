@@ -2,6 +2,15 @@
 
 {% block title %}Store - E-commerce Data Automation{% endblock %}
 
+{% block extra_styles %}
+  {% if css_href %}
+  <link rel="stylesheet" href="{{ css_href }}" />
+  {% endif %}
+{% endblock %}
+
+{% block head %}
+{% endblock %}
+
 {% block content %}
 <div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
   <h1 class="mb-6">Store</h1>

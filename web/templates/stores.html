@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-6">Stores</h1>
+  <form id="new-store" class="mb-6" onsubmit="return false;" style="display:flex; gap:12px; align-items:flex-end;">
+    <div style="flex:1">
+      <label>Name</label>
+      <input id="s-name" type="text" class="form-control" placeholder="My Store" required />
+    </div>
+    <div style="flex:1">
+      <label>Domain</label>
+      <input id="s-domain" type="text" class="form-control" placeholder="mystore.example" />
+    </div>
+    <div>
+      <label>Theme</label>
+      <select id="s-theme" class="form-control">
+        <option value="default">default</option>
+      </select>
+    </div>
+    <button id="btn-create" class="btn btn-primary">Create</button>
+  </form>
+  <div id="stores-list"></div>
+</div>
+<script>
+(async function(){
+  const listEl = document.getElementById('stores-list');
+  async function load(){
+    const res = await fetch('/api/stores');
+    const data = await res.json();
+    listEl.innerHTML = (data.stores||[]).map(s => `
+      <div style=\"border:1px solid #eee; padding:12px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;\">
+        <div>
+          <div><strong>${s.name}</strong> <span style=\"color:#666\">#${s.id}</span></div>
+          <div style=\"color:#666\">domain: ${s.domain || '-'} | theme: ${s.theme_key}</div>
+          <div style=\"margin-top:6px\"><a href=\"/store/${s.domain || s.id}\" target=\"_blank\">View store</a> · <a href=\"/store/${s.domain || s.id}?theme=default\" target=\"_blank\">Preview theme</a></div>
+        </div>
+        <div>
+          <select data-sid=\"${s.id}\" class=\"theme-select\">
+            <option value=\"default\" ${s.theme_key==='default'?'selected':''}>default</option>
+          </select>
+          <button data-sid=\"${s.id}\" class=\"btn-save\" style=\"margin-left:8px\">Save</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('btn-create').addEventListener('click', async () => {
+    const name = document.getElementById('s-name').value.trim();
+    const domain = document.getElementById('s-domain').value.trim();
+    const theme_key = document.getElementById('s-theme').value;
+    if(!name) return;
+    await fetch('/api/stores', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, domain, theme_key})});
+    await load();
+  });
+  listEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-save');
+    if(!btn) return;
+    const sid = btn.getAttribute('data-sid');
+    const select = listEl.querySelector(`select.theme-select[data-sid="${sid}"]`);
+    const theme_key = select.value;
+    await fetch(`/api/stores/${sid}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({theme_key})});
+    await load();
+  });
+  await load();
+})();
+</script>
+{% endblock %}

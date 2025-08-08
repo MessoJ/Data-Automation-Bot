@@ -19,6 +19,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     
     {% block head %}{% endblock %}
+    {% block extra_styles %}{% endblock %}
 </head>
 <body>
     <!-- Modern Navigation -->
@@ -80,6 +81,10 @@
                  <a href="/products" class="nav-link {% if request.endpoint == 'products_page' %}active{% endif %}">
                      <span class="nav-icon" aria-hidden="true">🛒</span>
                      <span class="nav-text">Products</span>
+                 </a>
+                 <a href="/stores" class="nav-link {% if request.endpoint == 'stores_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🏪</span>
+                     <span class="nav-text">Stores</span>
                  </a>
             </div>
             

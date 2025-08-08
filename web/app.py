@@ -7,7 +7,7 @@ Data Automation Bot web interface without external dependencies.
 
 import os
 import logging
-from flask import Flask, render_template, jsonify, request, send_file, send_from_directory, redirect, url_for
+from flask import Flask, render_template, jsonify, request, send_file, send_from_directory, redirect, url_for, session, g
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import json
@@ -25,8 +25,15 @@ from database.db_manager import (
     Warehouse,
     InventoryItem,
     Product,
+    Store,
+    DiscountRule,
+    ShippingMethod,
+    Payment,
+    User,
+    StoreUser,
 )
 from reporting.report_generator import ReportGenerator
+from werkzeug.security import generate_password_hash, check_password_hash
 from scheduler.job_scheduler import JobScheduler
 from api.api_client import APIClient
 import config
@@ -37,6 +44,7 @@ def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    app.config['SESSION_COOKIE_NAME'] = 'store_session'
     
     # Enable CORS for API endpoints
     CORS(app)
@@ -77,6 +85,11 @@ def create_app():
             transparent_png = BytesIO(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDAT\x08\x99c``\x00\x00\x00\x04\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
             return send_file(transparent_png, mimetype='image/png')
     
+    @app.before_request
+    def set_store_context():
+        g.store_id = request.headers.get('X-Store-Id') or session.get('store_id')
+        g.theme = request.args.get('theme') or session.get('theme')
+
     @app.route('/')
     def index():
         """Root route - redirect to landing page or dashboard based on context."""
@@ -89,6 +102,40 @@ def create_app():
         except Exception as e:
             logger.error(f"Dashboard error: {e}")
             return jsonify({'error': f'Dashboard error: {str(e)}'}), 500
+
+    @app.route('/api/auth/login', methods=['POST'])
+    def api_login():
+        try:
+            data = request.json or {}
+            email = (data.get('email') or '').strip().lower()
+            password = data.get('password') or ''
+            if not email:
+                return jsonify({'error': 'email required'}), 400
+            db = DatabaseManager()
+            with db.get_session() as s:
+                user = s.query(User).filter(User.email == email).first()
+                if not user or (user.password_hash and not check_password_hash(user.password_hash, password)):
+                    return jsonify({'error': 'invalid credentials'}), 401
+                session['uid'] = user.id
+                return jsonify({'success': True, 'user_id': user.id})
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/auth/logout', methods=['POST'])
+    def api_logout():
+        session.clear()
+        return jsonify({'success': True})
+
+    @app.route('/api/stores/switch', methods=['POST'])
+    def api_switch_store():
+        try:
+            data = request.json or {}
+            store_id = int(data.get('store_id'))
+            session['store_id'] = store_id
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
 
     @app.route('/checkout')
     def checkout_page():
@@ -412,7 +459,7 @@ def create_app():
         db = DatabaseManager()
         try:
             data = request.json or {}
-            with db.get_session() as session:
+            with db.get_session() as s:
                 cust = db.get_or_create_customer(email=data.get('email'), name=data.get('name'))
                 order = Order(
                     order_number=str(data.get('order_number') or f"ORD-{int(datetime.now().timestamp())}"),
@@ -420,12 +467,50 @@ def create_app():
                     warehouse_id=data.get('warehouse_id'),
                     status=data.get('status', 'pending'),
                     total_amount=float(data.get('total_amount') or 0.0),
+                    store_id=data.get('store_id')
                 )
-                session.add(order)
-                session.flush()
+                s.add(order)
+                s.flush()
                 return jsonify({'success': True, 'order_id': order.id, 'order_number': order.order_number})
         except Exception as e:
             logger.error(f"Create order error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/orders/from_cart', methods=['POST'])
+    def api_create_order_from_cart():
+        try:
+            data = request.json or {}
+            sid = data.get('sid') or session.get('sid')
+            store_id = int(data.get('store_id') or 0)
+            email = data.get('email')
+            name = data.get('name')
+            if not sid or not store_id:
+                return jsonify({'error': 'sid and store_id required'}), 400
+            db = DatabaseManager()
+            oid = db.create_order_from_cart(session_id=sid, store_id=store_id, email=email, name=name)
+            if not oid:
+                return jsonify({'error': 'cart empty'}), 400
+            return jsonify({'success': True, 'order_id': oid})
+        except Exception as e:
+            logger.error(f"Create order from cart error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/orders/status/<int:order_id>', methods=['PUT'])
+    def api_update_order_status(order_id: int):
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            new_status = data.get('status')
+            with db.get_session() as s:
+                order = s.query(Order).get(order_id)
+                if not order:
+                    return jsonify({'error': 'Order not found'}), 404
+                if new_status:
+                    order.status = new_status
+                s.add(order)
+                return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Update order status error: {e}")
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/orders/track/<order_number>')
@@ -678,6 +763,38 @@ def create_app():
             return jsonify({'error': str(e)}), 500
 
     # --- Product Catalog (to compete with storefronts) ---
+    @app.route('/api/stores', methods=['GET', 'POST'])
+    def api_stores():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session_db:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    name = data.get('name')
+                    if not name:
+                        return jsonify({'error': 'name required'}), 400
+                    store_id = db.create_store(name=name, domain=data.get('domain'), theme_key=data.get('theme_key', 'default'), settings=data.get('settings') or {})
+                    return jsonify({'success': True, 'id': store_id})
+                else:
+                    return jsonify({'stores': db.list_stores()})
+        except Exception as e:
+            logger.error(f"Stores error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stores/<int:store_id>', methods=['GET', 'PUT'])
+    def api_store_detail(store_id: int):
+        db = DatabaseManager()
+        try:
+            if request.method == 'GET':
+                s = db.get_store_by_id_or_domain(str(store_id))
+                return (jsonify(s), 200) if s else (jsonify({'error': 'Not found'}), 404)
+            if request.method == 'PUT':
+                ok = db.update_store(store_id, request.json or {})
+                return jsonify({'success': ok}) if ok else (jsonify({'error': 'Not found'}), 404)
+        except Exception as e:
+            logger.error(f"Store detail error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/products', methods=['GET', 'POST'])
     def api_products():
         db = DatabaseManager()
@@ -691,6 +808,86 @@ def create_app():
                 return jsonify({'products': db.list_products(store_id=store_id)})
         except Exception as e:
             logger.error(f"Products error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/discount_rules', methods=['GET', 'POST'])
+    def api_discount_rules():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as s:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    rule = DiscountRule(
+                        store_id=int(data.get('store_id')),
+                        rule_type=data.get('rule_type'),
+                        target_value=str(data.get('target_value')),
+                        discount_type=data.get('discount_type', 'percent'),
+                        amount=float(data.get('amount') or 0.0),
+                        active=bool(data.get('active', True)),
+                    )
+                    s.add(rule)
+                    s.flush()
+                    return jsonify({'success': True, 'id': rule.id})
+                else:
+                    store_id = request.args.get('store_id', type=int)
+                    q = s.query(DiscountRule)
+                    if store_id:
+                        q = q.filter(DiscountRule.store_id == store_id)
+                    items = q.order_by(DiscountRule.created_at.desc()).all()
+                    return jsonify({'rules': [
+                        {
+                            'id': r.id,
+                            'store_id': r.store_id,
+                            'rule_type': r.rule_type,
+                            'target_value': r.target_value,
+                            'discount_type': r.discount_type,
+                            'amount': r.amount,
+                            'active': r.active,
+                        } for r in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Discount rules error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/shipping_methods', methods=['GET', 'POST'])
+    def api_shipping_methods():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as s:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    m = ShippingMethod(
+                        store_id=int(data.get('store_id')),
+                        name=data.get('name'),
+                        method_type=data.get('method_type', 'flat_rate'),
+                        rate=float(data.get('rate') or 0.0),
+                        threshold=float(data.get('threshold')) if data.get('threshold') is not None else None,
+                        provider=data.get('provider'),
+                        active=bool(data.get('active', True)),
+                    )
+                    s.add(m)
+                    s.flush()
+                    return jsonify({'success': True, 'id': m.id})
+                else:
+                    store_id = request.args.get('store_id', type=int)
+                    q = s.query(ShippingMethod)
+                    if store_id:
+                        q = q.filter(ShippingMethod.store_id == store_id)
+                    items = q.order_by(ShippingMethod.created_at.desc()).all()
+                    return jsonify({'methods': [
+                        {
+                            'id': m.id,
+                            'store_id': m.store_id,
+                            'name': m.name,
+                            'method_type': m.method_type,
+                            'rate': m.rate,
+                            'threshold': m.threshold,
+                            'provider': m.provider,
+                            'active': m.active,
+                        } for m in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Shipping methods error: {e}")
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/products/<int:product_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -714,20 +911,22 @@ def create_app():
     @app.route('/api/cart', methods=['GET', 'POST', 'DELETE'])
     def api_cart():
         db = DatabaseManager()
-        sid = request.args.get('sid') or (request.json or {}).get('sid')
+        sid = request.args.get('sid') or (request.json or {}).get('sid') or session.get('sid')
         if not sid:
             return jsonify({'error': 'sid required'}), 400
         try:
             if request.method == 'POST':
                 data = request.json or {}
-                db.add_to_cart(sid, int(data.get('product_id')), int(data.get('quantity') or 1))
+                store_id = data.get('store_id') or g.store_id
+                db.add_to_cart(sid, int(data.get('product_id')), int(data.get('quantity') or 1), store_id=store_id)
                 return jsonify({'success': True})
             if request.method == 'DELETE':
                 item_id = int((request.json or {}).get('item_id'))
                 db.remove_cart_item(sid, item_id)
                 return jsonify({'success': True})
             # GET
-            return jsonify(db.list_cart(sid))
+            store_id = request.args.get('store_id', type=int) or g.store_id
+            return jsonify(db.list_cart(sid, store_id=store_id))
         except Exception as e:
             logger.error(f"Cart error: {e}")
             return jsonify({'error': str(e)}), 500
@@ -740,6 +939,22 @@ def create_app():
         except Exception as e:
             logger.error(f"Storefront error: {e}")
             return jsonify({'error': f'Storefront error: {str(e)}'}), 500
+
+    @app.route('/store/<identifier>')
+    def store_theme_page(identifier: str):
+        """Serve themed store page by domain or id. Supports ?theme= preview."""
+        try:
+            db = DatabaseManager()
+            store = db.get_store_by_id_or_domain(identifier)
+            if not store:
+                return jsonify({'error': 'Store not found'}), 404
+            theme_key = request.args.get('theme') or store.get('theme_key') or 'default'
+            template_name = f"themes/{theme_key}/index.html"
+            css_href = f"/static/css/themes/{theme_key}.css"
+            return render_template(template_name, store=store, theme_key=theme_key, css_href=css_href)
+        except Exception as e:
+            logger.error(f"Store themed page error: {e}")
+            return jsonify({'error': f'Store page error: {str(e)}'}), 500
     # --- Stripe Checkout ---
     @app.route('/api/pay/checkout_session', methods=['POST'])
     def api_create_checkout_session():
@@ -747,26 +962,88 @@ def create_app():
             if not stripe.api_key:
                 return jsonify({'error': 'Stripe not configured'}), 400
             data = request.json or {}
-            amount_cents = int(float(data.get('amount', 0)) * 100)
+            # If provided sid/store_id, compute cart total
+            db = DatabaseManager()
+            sid = data.get('sid') or session.get('sid')
+            store_id = data.get('store_id') or g.store_id
+            name = data.get('name', 'Order Payment')
+            amount_cents = 0
+            if sid and store_id:
+                cart = db.list_cart(sid, store_id=store_id)
+                amount_cents = int(float(cart.get('total', 0)) * 100)
+                name = data.get('name', f"Cart {sid}")
+            else:
+                amount_cents = int(float(data.get('amount', 0)) * 100)
             if amount_cents <= 0:
                 return jsonify({'error': 'Invalid amount'}), 400
-            session = stripe.checkout.Session.create(
+            checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 mode='payment',
                 success_url=data.get('success_url') or request.host_url.rstrip('/') + '/web/',
                 cancel_url=data.get('cancel_url') or request.host_url.rstrip('/') + '/web/',
+                metadata={
+                    'sid': sid or '',
+                    'store_id': str(store_id or ''),
+                },
                 line_items=[{
                     'price_data': {
                         'currency': 'usd',
-                        'product_data': {'name': data.get('name', 'Subscription')},
+                        'product_data': {'name': name},
                         'unit_amount': amount_cents,
                     },
                     'quantity': 1,
                 }]
             )
-            return jsonify({'id': session.id, 'url': session.url})
+            return jsonify({'id': checkout_session.id, 'url': checkout_session.url})
         except Exception as e:
             logger.error(f"Stripe checkout error: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/stripe/webhook', methods=['POST'])
+    def stripe_webhook():
+        payload = request.data
+        sig_header = request.headers.get('Stripe-Signature')
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+        event = None
+        try:
+            if webhook_secret:
+                event = stripe.Webhook.construct_event(
+                    payload, sig_header, webhook_secret
+                )
+            else:
+                event = json.loads(payload)
+        except Exception as e:
+            logger.error(f"Stripe webhook signature error: {e}")
+            return jsonify({'error': 'invalid signature'}), 400
+
+        try:
+            db = DatabaseManager()
+            event_type = event.get('type')
+            data_obj = event.get('data', {}).get('object', {})
+            if event_type == 'checkout.session.completed':
+                metadata = data_obj.get('metadata', {})
+                sid = metadata.get('sid')
+                store_id = metadata.get('store_id')
+                customer_details = data_obj.get('customer_details') or {}
+                email = (customer_details.get('email') if isinstance(customer_details, dict) else None) or data_obj.get('customer_email')
+                if sid and store_id:
+                    try:
+                        order_id = db.create_order_from_cart(sid=sid, store_id=int(store_id), email=email, name=email)
+                        logger.info(f"Order created from Stripe session: {order_id}")
+                    except Exception as oe:
+                        logger.error(f"Failed to create order from cart: {oe}")
+                # record payment
+                try:
+                    with db.get_session() as s:
+                        # Find order by latest for store/email as a simple heuristic
+                        order_row = s.query(Order).filter(Order.store_id == int(store_id)).order_by(Order.created_at.desc()).first() if store_id else None
+                        pay = Payment(order_id=order_row.id if order_row else None, provider='stripe', status='succeeded', amount=(data_obj.get('amount_total') or 0)/100.0, currency=data_obj.get('currency', 'usd').upper(), payment_metadata=data_obj)
+                        s.add(pay)
+                except Exception as pe:
+                    logger.error(f"Payment record error: {pe}")
+            return jsonify({'received': True})
+        except Exception as e:
+            logger.error(f"Stripe webhook error: {e}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/jobs/<job_id>/pause', methods=['POST'])
@@ -907,6 +1184,14 @@ def create_app():
         except Exception as e:
             logger.error(f"Products page error: {e}")
             return jsonify({'error': f'Products page error: {str(e)}'}), 500
+
+    @app.route('/stores')
+    def stores_page():
+        try:
+            return render_template('stores.html')
+        except Exception as e:
+            logger.error(f"Stores page error: {e}")
+            return jsonify({'error': f'Stores page error: {str(e)}'}), 500
     
     @app.errorhandler(404)
     def not_found(error):

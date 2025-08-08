@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ css_href }}" />
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px; margin: 0 auto; padding: var(--space-6);">
+  <header class="mb-6">
+    <h1>{{ store.name }}</h1>
+    {% if store.domain %}<p class="text-muted">{{ store.domain }}</p>{% endif %}
+  </header>
+  <div id="store-products" data-store-id="{{ store.id }}"></div>
+</div>
+<script>
+(async function(){
+  try {
+    const storeId = {{ store.id }};
+    const res = await fetch(`/api/products?store_id=${storeId}`);
+    const data = await res.json();
+    const el = document.getElementById('store-products');
+    const items = (data.products || []).map(p => `
+      <div class=\"card\" style=\"margin-bottom: 12px; padding: 12px; border: 1px solid #eee;\">\n        <div style=\"display:flex; align-items:center; gap: 12px;\">\n          ${p.image_url ? `<img src=\"${p.image_url}\" alt=\"${p.name}\" style=\"width:64px;height:64px;object-fit:cover;border-radius:8px;\"/>` : ''}\n          <div style=\"flex:1\">\n            <div style=\"font-weight:600\">${p.name}</div>\n            <div style=\"color:#666\">${p.category || ''}</div>\n          </div>\n          <div style=\"text-align:right\">\n            <div style=\"font-weight:600\">$${Number(p.price).toFixed(2)}</div>\n            <button data-pid=\"${p.id}\" class=\"btn-add\" style=\"margin-top:6px\">Add to cart</button>\n          </div>\n        </div>\n      </div>
+    `).join('');
+    el.innerHTML = items || '<p>No products yet.</p>';
+    el.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-add');
+      if(!btn) return;
+      const pid = btn.getAttribute('data-pid');
+      const sid = localStorage.getItem('sid') || (Date.now()+""+Math.random()).slice(0,12);
+      localStorage.setItem('sid', sid);
+      await fetch('/api/cart', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ sid, product_id: Number(pid), quantity: 1, store_id: storeId })});
+      alert('Added to cart');
+    });
+  } catch(err) { console.error(err); }
+})();
+</script>
+{% endblock %}

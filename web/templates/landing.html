@@ -19,16 +19,17 @@
       </ul>
     </div>
     <div class="hero-visual" aria-hidden="true">
-      <div class="mock-card">
-        <div class="mock-title">Today’s Overview</div>
-        <div class="mock-stats">
-          <div><span>Revenue</span><strong>$8,420</strong></div>
-          <div><span>Orders</span><strong>213</strong></div>
-          <div><span>Alerts</span><strong>3</strong></div>
-        </div>
-        <div class="mock-chart"></div>
-      </div>
+      <img src="{{ url_for('static', filename='images/undraw_dark_hero.svg') }}" alt="Dark Hero Illustration" style="width:100%;max-width:420px;display:block;margin:0 auto;border-radius:2rem;box-shadow:0 4px 32px #0002;" />
     </div>
+  </div>
+</section>
+
+<section class="platform-logos" style="text-align:center;margin-top:2rem;">
+  <span style="color:#A3A8B8;font-size:1rem;display:block;margin-bottom:1rem;">Connect with your favorite platforms</span>
+  <div style="display:flex;justify-content:center;gap:2.5rem;align-items:center;">
+    <img src="{{ url_for('static', filename='images/github.svg') }}" alt="GitHub" style="width:40px;height:40px;filter:drop-shadow(0 2px 8px #0006);" />
+    <img src="{{ url_for('static', filename='images/slack.svg') }}" alt="Slack" style="width:40px;height:40px;filter:drop-shadow(0 2px 8px #0006);" />
+    <img src="{{ url_for('static', filename='images/discord.svg') }}" alt="Discord" style="width:40px;height:40px;filter:drop-shadow(0 2px 8px #0006);" />
   </div>
 </section>
 
@@ -54,6 +55,8 @@
 .mock-stats strong { color: var(--neutral-900); font-size: 1.25rem; }
 .mock-chart { height: 140px; background: linear-gradient(180deg, rgba(22,160,133,.2), transparent); border-radius: var(--radius-lg); }
 @media (max-width: 768px) { .hero-cta { justify-content: center; } }
+.platform-logos img { transition: transform 0.2s; }
+.platform-logos img:hover { transform: scale(1.12) rotate(-4deg); }
 </style>
 {% endblock %}
 

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Checkout</h1>
+
+  <div class="card">
+    <div class="card-body d-grid" style="grid-template-columns: 1fr; gap: var(--space-4);">
+      <input id="productName" class="form-control" placeholder="Item Name" value="Data Automation Subscription" />
+      <input id="amount" type="number" class="form-control" placeholder="Amount (USD)" value="49" />
+      <button class="btn btn-primary" id="payBtn">Pay with Card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const pk = '{{ stripe_pk }}';
+const stripeClient = window.Stripe ? window.Stripe(pk) : null;
+
+document.getElementById('payBtn').addEventListener('click', async () => {
+  try {
+    const payload = {
+      name: document.getElementById('productName').value,
+      amount: parseFloat(document.getElementById('amount').value || '0'),
+      success_url: window.location.origin + '/web/',
+      cancel_url: window.location.href
+    };
+    const res = await fetch('/api/pay/checkout_session', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) { showGlobalToast(data.error || 'Failed to create session', 'error'); return; }
+    if (data.url) { window.location = data.url; return; }
+    if (stripeClient && data.id) { await stripeClient.redirectToCheckout({ sessionId: data.id }); }
+  } catch (e) { showGlobalToast('Payment failed to start', 'error'); }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Store - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-6">Store</h1>
+  <div class="d-grid" style="grid-template-columns: 3fr 1fr; gap: var(--space-6);">
+    <div>
+      <div id="productsGrid" class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4);"></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">Cart</h2></div>
+        <div class="card-body" id="cartBody">Your cart is empty</div>
+        <div class="card-footer">
+          <button class="btn btn-primary w-full" onclick="proceedCheckout()">Checkout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SID_KEY = 'store_sid';
+function getSid() {
+  let sid = localStorage.getItem(SID_KEY);
+  if (!sid) { sid = Math.random().toString(36).slice(2); localStorage.setItem(SID_KEY, sid); }
+  return sid;
+}
+
+async function loadProducts() {
+  const res = await fetch('/api/products');
+  const data = await res.json();
+  const grid = document.getElementById('productsGrid');
+  const list = (data.products || []).filter(p => p.active);
+  if (list.length === 0) { grid.innerHTML = '<div>No products yet</div>'; return; }
+  grid.innerHTML = list.map(p => `
+    <div class="card">
+      <div class="card-body">
+        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="width:100%;height:160px;object-fit:cover;border-radius:8px;" />` : ''}
+        <h3 class="mt-3">${p.name}</h3>
+        <p class="text-sm">${p.description || ''}</p>
+        <div class="d-flex items-center justify-between mt-2">
+          <strong>${p.price} ${p.currency}</strong>
+          <button class="btn btn-sm btn-secondary" onclick="addToCart(${p.id})">Add</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addToCart(pid) {
+  const res = await fetch('/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: getSid(), product_id: pid, quantity: 1 })});
+  const data = await res.json();
+  if (res.ok) { showGlobalToast('Added to cart', 'success'); loadCart(); } else { showGlobalToast(data.error || 'Failed', 'error'); }
+}
+
+async function loadCart() {
+  const res = await fetch(`/api/cart?sid=${encodeURIComponent(getSid())}`);
+  const data = await res.json();
+  const body = document.getElementById('cartBody');
+  const items = data.items || [];
+  if (items.length === 0) { body.textContent = 'Your cart is empty'; return; }
+  body.innerHTML = items.map(i => `
+    <div class="d-flex items-center justify-between mb-2">
+      <div>${i.name} x ${i.quantity}</div>
+      <div>
+        ${i.line_total.toFixed(2)}
+        <button class="btn btn-sm btn-danger" style="margin-left:8px" onclick="removeItem(${i.id})">✖</button>
+      </div>
+    </div>
+  `).join('') + `<div class="d-flex items-center justify-between mt-3"><strong>Total</strong><strong>${(data.total || 0).toFixed(2)}</strong></div>`;
+}
+
+async function removeItem(id) {
+  const res = await fetch('/api/cart', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: getSid(), item_id: id })});
+  if (res.ok) { loadCart(); }
+}
+
+async function proceedCheckout() {
+  // Simple: use Stripe Checkout for total
+  const resCart = await fetch(`/api/cart?sid=${encodeURIComponent(getSid())}`);
+  const cart = await resCart.json();
+  if (!cart.items || cart.items.length === 0) { showGlobalToast('Cart is empty', 'warning'); return; }
+  const res = await fetch('/api/pay/checkout_session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Order', amount: cart.total, success_url: window.location.origin + '/store', cancel_url: window.location.href })});
+  const data = await res.json();
+  if (!res.ok) { showGlobalToast(data.error || 'Payment setup failed', 'error'); return; }
+  if (data.url) { window.location = data.url; }
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadProducts(); loadCart(); });
+</script>
+{% endblock %}
+

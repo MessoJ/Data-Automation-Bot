@@ -49,6 +49,38 @@
                     <span class="nav-icon" aria-hidden="true">⚙️</span>
                     <span class="nav-text">Settings</span>
                 </a>
+                 <a href="/coupons" class="nav-link {% if request.endpoint == 'coupons_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🏷️</span>
+                     <span class="nav-text">Coupons</span>
+                 </a>
+                 <a href="/warehouses" class="nav-link {% if request.endpoint == 'warehouses_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🏬</span>
+                     <span class="nav-text">Warehouses</span>
+                 </a>
+                 <a href="/drivers" class="nav-link {% if request.endpoint == 'drivers_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🚚</span>
+                     <span class="nav-text">Drivers</span>
+                 </a>
+                 <a href="/track" class="nav-link {% if request.endpoint == 'track_order_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🔎</span>
+                     <span class="nav-text">Track Order</span>
+                 </a>
+                 <a href="/checkout" class="nav-link {% if request.endpoint == 'checkout_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">💳</span>
+                     <span class="nav-text">Checkout</span>
+                 </a>
+                 <a href="/notifications" class="nav-link {% if request.endpoint == 'notifications_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🔔</span>
+                     <span class="nav-text">Notifications</span>
+                 </a>
+                 <a href="/loyalty" class="nav-link {% if request.endpoint == 'loyalty_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">⭐</span>
+                     <span class="nav-text">Loyalty</span>
+                 </a>
+                 <a href="/products" class="nav-link {% if request.endpoint == 'products_page' %}active{% endif %}">
+                     <span class="nav-icon" aria-hidden="true">🛒</span>
+                     <span class="nav-text">Products</span>
+                 </a>
             </div>
             
             <div class="nav-actions">
@@ -74,8 +106,17 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading"></div>
+    </div>
+
     <!-- Global Toast Container -->
     <div class="toast-container" id="globalToastContainer"></div>
+
+    <!-- Global scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     {% block scripts %}{% endblock %}
 

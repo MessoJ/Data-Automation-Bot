@@ -11,8 +11,21 @@ from flask import Flask, render_template, jsonify, request, send_file, send_from
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import json
+import stripe
 
-from database.db_manager import DatabaseManager
+from database.db_manager import (
+    DatabaseManager,
+    Coupon,
+    Customer,
+    LoyaltyTransaction,
+    Notification,
+    Driver,
+    DeliveryAssignment,
+    Order,
+    Warehouse,
+    InventoryItem,
+    Product,
+)
 from reporting.report_generator import ReportGenerator
 from scheduler.job_scheduler import JobScheduler
 from api.api_client import APIClient
@@ -39,6 +52,10 @@ def create_app():
     report_generator = ReportGenerator()
     job_scheduler = JobScheduler()
     api_client = APIClient()
+
+    # Stripe configuration
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+    STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
     
     @app.route('/landing')
     def landing_page():
@@ -72,6 +89,14 @@ def create_app():
         except Exception as e:
             logger.error(f"Dashboard error: {e}")
             return jsonify({'error': f'Dashboard error: {str(e)}'}), 500
+
+    @app.route('/checkout')
+    def checkout_page():
+        try:
+            return render_template('checkout.html', stripe_pk=STRIPE_PUBLIC_KEY)
+        except Exception as e:
+            logger.error(f"Checkout page error: {e}")
+            return jsonify({'error': f'Checkout page error: {str(e)}'}), 500
     
     @app.route('/onboarding')
     def onboarding():
@@ -89,6 +114,9 @@ def create_app():
             job_scheduler = JobScheduler()
             jobs = job_scheduler.get_jobs() if job_scheduler.is_running() else []
             api_client = APIClient()
+            # Notifications summary
+            with db.get_session() as session:
+                unread = session.query(Notification).filter(Notification.is_read == False).count()
             status = {
                 'timestamp': datetime.now().isoformat(),
                 'database': {
@@ -107,6 +135,9 @@ def create_app():
                 'api': {
                     'base_url': config.API_BASE_URL,
                     'configured': bool(config.API_KEY)
+                },
+                'notifications': {
+                    'unread': unread
                 }
             }
             return jsonify(status)
@@ -202,6 +233,337 @@ def create_app():
             logger.error(f"Error getting discrepancy data: {e}")
             return jsonify({'error': str(e)}), 500
     
+    # --- Competitive feature: Coupon management ---
+    @app.route('/api/coupons/apply', methods=['POST'])
+    def api_coupon_apply():
+        try:
+            payload = request.json or {}
+            code = (payload.get('code') or '').strip()
+            amount = float(payload.get('amount') or 0.0)
+            if not code:
+                return jsonify({'success': False, 'message': 'Coupon code required'}), 400
+            db = DatabaseManager()
+            result = db.apply_coupon_to_amount(code, amount)
+            return jsonify({'success': result.get('applied', False), **result})
+        except Exception as e:
+            logger.error(f"Coupon apply error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/coupons', methods=['GET', 'POST'])
+    def api_coupons():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    coupon = Coupon(
+                        code=str(data.get('code', '')).strip(),
+                        name=data.get('name'),
+                        discount_type=data.get('discount_type', 'percent'),
+                        amount=float(data.get('amount') or 0.0),
+                        active=bool(data.get('active', True)),
+                        start_date=datetime.fromisoformat(data['start_date']) if data.get('start_date') else None,
+                        end_date=datetime.fromisoformat(data['end_date']) if data.get('end_date') else None,
+                    )
+                    session.add(coupon)
+                    session.flush()
+                    return jsonify({'success': True, 'id': coupon.id})
+                else:
+                    items = session.query(Coupon).order_by(Coupon.created_at.desc()).limit(100).all()
+                    return jsonify({'coupons': [
+                        {
+                            'id': c.id,
+                            'code': c.code,
+                            'name': c.name,
+                            'discount_type': c.discount_type,
+                            'amount': c.amount,
+                            'active': c.active,
+                            'start_date': c.start_date.isoformat() if c.start_date else None,
+                            'end_date': c.end_date.isoformat() if c.end_date else None,
+                            'usage_count': c.usage_count,
+                        } for c in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Coupons error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Competitive feature: Loyalty program ---
+    @app.route('/api/loyalty/balance')
+    def api_loyalty_balance():
+        email = request.args.get('email')
+        if not email:
+            return jsonify({'error': 'email required'}), 400
+        db = DatabaseManager()
+        with db.get_session() as session:
+            cust = session.query(Customer).filter(Customer.email == email).first()
+            balance = cust.loyalty_points if cust else 0
+            return jsonify({'email': email, 'points': balance})
+
+    @app.route('/api/loyalty/earn', methods=['POST'])
+    def api_loyalty_earn():
+        try:
+            payload = request.json or {}
+            email = payload.get('email')
+            points = int(payload.get('points') or 0)
+            reason = payload.get('reason', 'earn')
+            db = DatabaseManager()
+            with db.get_session() as session:
+                cust = db.get_or_create_customer(email=email, name=payload.get('name'))
+                # reattach to session
+                cust = session.query(Customer).get(cust.id)
+                cust.loyalty_points = (cust.loyalty_points or 0) + points
+                session.add(LoyaltyTransaction(customer_id=cust.id, points_change=points, reason=reason))
+                return jsonify({'success': True, 'email': email, 'points': cust.loyalty_points})
+        except Exception as e:
+            logger.error(f"Loyalty earn error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/loyalty/redeem', methods=['POST'])
+    def api_loyalty_redeem():
+        try:
+            payload = request.json or {}
+            email = payload.get('email')
+            points = int(payload.get('points') or 0)
+            reason = payload.get('reason', 'redeem')
+            db = DatabaseManager()
+            with db.get_session() as session:
+                cust = db.get_or_create_customer(email=email, name=payload.get('name'))
+                cust = session.query(Customer).get(cust.id)
+                new_points = max(0, (cust.loyalty_points or 0) - points)
+                delta = new_points - (cust.loyalty_points or 0)
+                cust.loyalty_points = new_points
+                session.add(LoyaltyTransaction(customer_id=cust.id, points_change=delta, reason=reason))
+                return jsonify({'success': True, 'email': email, 'points': cust.loyalty_points})
+        except Exception as e:
+            logger.error(f"Loyalty redeem error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Competitive feature: Notifications center ---
+    @app.route('/api/notifications', methods=['GET', 'POST'])
+    def api_notifications():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    notif = Notification(
+                        title=data.get('title', 'Notification'),
+                        message=data.get('message', ''),
+                        level=data.get('level', 'info')
+                    )
+                    session.add(notif)
+                    session.flush()
+                    return jsonify({'success': True, 'id': notif.id})
+                else:
+                    items = session.query(Notification).order_by(Notification.created_at.desc()).limit(50).all()
+                    return jsonify({'notifications': [
+                        {
+                            'id': n.id,
+                            'title': n.title,
+                            'message': n.message,
+                            'level': n.level,
+                            'is_read': n.is_read,
+                            'created_at': n.created_at.isoformat()
+                        } for n in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Notifications error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/notifications/read/<int:notif_id>', methods=['POST'])
+    def api_notifications_read(notif_id: int):
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                n = session.query(Notification).get(notif_id)
+                if not n:
+                    return jsonify({'error': 'Not found'}), 404
+                n.is_read = True
+                session.add(n)
+                return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Notification read error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Competitive feature: Delivery management & tracking ---
+    @app.route('/api/drivers', methods=['GET', 'POST'])
+    def api_drivers():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    driver = Driver(name=data.get('name', 'Driver'), phone=data.get('phone'))
+                    session.add(driver)
+                    session.flush()
+                    return jsonify({'success': True, 'id': driver.id})
+                else:
+                    items = session.query(Driver).order_by(Driver.created_at.desc()).limit(200).all()
+                    return jsonify({'drivers': [
+                        {'id': d.id, 'name': d.name, 'phone': d.phone, 'status': d.status}
+                        for d in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Drivers error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/orders', methods=['POST'])
+    def api_create_order():
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            with db.get_session() as session:
+                cust = db.get_or_create_customer(email=data.get('email'), name=data.get('name'))
+                order = Order(
+                    order_number=str(data.get('order_number') or f"ORD-{int(datetime.now().timestamp())}"),
+                    customer_id=cust.id,
+                    warehouse_id=data.get('warehouse_id'),
+                    status=data.get('status', 'pending'),
+                    total_amount=float(data.get('total_amount') or 0.0),
+                )
+                session.add(order)
+                session.flush()
+                return jsonify({'success': True, 'order_id': order.id, 'order_number': order.order_number})
+        except Exception as e:
+            logger.error(f"Create order error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/orders/track/<order_number>')
+    def api_track_order(order_number: str):
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                order = session.query(Order).filter(Order.order_number == order_number).first()
+                if not order:
+                    return jsonify({'error': 'Order not found'}), 404
+                assign = session.query(DeliveryAssignment).filter(DeliveryAssignment.order_id == order.id).order_by(DeliveryAssignment.updated_at.desc()).first()
+                result = {
+                    'order_number': order.order_number,
+                    'status': order.status,
+                    'total_amount': order.total_amount,
+                    'created_at': order.created_at.isoformat(),
+                    'assignment': None
+                }
+                if assign:
+                    result['assignment'] = {
+                        'id': assign.id,
+                        'status': assign.status,
+                        'pickup_time': assign.pickup_time.isoformat() if assign.pickup_time else None,
+                        'dropoff_time': assign.dropoff_time.isoformat() if assign.dropoff_time else None,
+                        'updated_at': assign.updated_at.isoformat() if assign.updated_at else None
+                    }
+                return jsonify(result)
+        except Exception as e:
+            logger.error(f"Track order error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/assignments', methods=['POST'])
+    def api_create_assignment():
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            with db.get_session() as session:
+                order = session.query(Order).filter(Order.order_number == str(data.get('order_number'))).first()
+                if not order:
+                    return jsonify({'error': 'Order not found'}), 404
+                assignment = DeliveryAssignment(order_id=order.id, driver_id=int(data.get('driver_id')))
+                session.add(assignment)
+                session.flush()
+                return jsonify({'success': True, 'assignment_id': assignment.id})
+        except Exception as e:
+            logger.error(f"Create assignment error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/assignments/<int:assignment_id>/status', methods=['POST'])
+    def api_update_assignment_status(assignment_id: int):
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            new_status = data.get('status')
+            with db.get_session() as session:
+                a = session.query(DeliveryAssignment).get(assignment_id)
+                if not a:
+                    return jsonify({'error': 'Assignment not found'}), 404
+                a.status = new_status or a.status
+                if new_status == 'picked_up':
+                    a.pickup_time = datetime.now()
+                if new_status in ('delivered', 'failed'):
+                    a.dropoff_time = datetime.now()
+                session.add(a)
+                return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Update assignment status error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Branch/Warehouse & Inventory ---
+    @app.route('/api/warehouses', methods=['GET', 'POST'])
+    def api_warehouses():
+        db = DatabaseManager()
+        try:
+            with db.get_session() as session:
+                if request.method == 'POST':
+                    data = request.json or {}
+                    w = Warehouse(name=data.get('name', 'Warehouse'), address=data.get('address'), city=data.get('city'))
+                    session.add(w)
+                    session.flush()
+                    return jsonify({'success': True, 'id': w.id})
+                else:
+                    items = session.query(Warehouse).order_by(Warehouse.created_at.desc()).all()
+                    return jsonify({'warehouses': [
+                        {'id': w.id, 'name': w.name, 'address': w.address, 'city': w.city}
+                        for w in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Warehouses error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/inventory', methods=['GET'])
+    def api_inventory():
+        db = DatabaseManager()
+        wid = request.args.get('warehouse_id')
+        try:
+            with db.get_session() as session:
+                q = session.query(InventoryItem)
+                if wid:
+                    q = q.filter(InventoryItem.warehouse_id == int(wid))
+                items = q.order_by(InventoryItem.name.asc()).limit(500).all()
+                return jsonify({'items': [
+                    {
+                        'id': i.id,
+                        'sku': i.sku,
+                        'name': i.name,
+                        'quantity': i.quantity,
+                        'warehouse_id': i.warehouse_id,
+                        'updated_at': i.updated_at.isoformat() if i.updated_at else None
+                    } for i in items
+                ]})
+        except Exception as e:
+            logger.error(f"Inventory list error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/inventory/adjust', methods=['POST'])
+    def api_inventory_adjust():
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            with db.get_session() as session:
+                item = session.query(InventoryItem).filter(InventoryItem.sku == str(data.get('sku'))).first()
+                if not item:
+                    item = InventoryItem(
+                        sku=str(data.get('sku')),
+                        name=data.get('name', 'Item'),
+                        warehouse_id=int(data.get('warehouse_id')) if data.get('warehouse_id') else None,
+                        quantity=0,
+                    )
+                delta = int(data.get('delta') or 0)
+                item.quantity = (item.quantity or 0) + delta
+                session.add(item)
+                session.flush()
+                return jsonify({'success': True, 'id': item.id, 'quantity': item.quantity})
+        except Exception as e:
+            logger.error(f"Inventory adjust error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/data')
     def api_data():
         """Get data records with optional filtering."""
@@ -314,6 +676,98 @@ def create_app():
         except Exception as e:
             logger.error(f"Error getting jobs: {e}")
             return jsonify({'error': str(e)}), 500
+
+    # --- Product Catalog (to compete with storefronts) ---
+    @app.route('/api/products', methods=['GET', 'POST'])
+    def api_products():
+        db = DatabaseManager()
+        try:
+            if request.method == 'POST':
+                data = request.json or {}
+                pid = db.create_product(data, store_id=data.get('store_id'))
+                return jsonify({'success': True, 'id': pid})
+            else:
+                store_id = request.args.get('store_id', type=int)
+                return jsonify({'products': db.list_products(store_id=store_id)})
+        except Exception as e:
+            logger.error(f"Products error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/products/<int:product_id>', methods=['GET', 'PUT', 'DELETE'])
+    def api_product_detail(product_id: int):
+        db = DatabaseManager()
+        try:
+            if request.method == 'GET':
+                p = db.get_product(product_id)
+                return (jsonify(p), 200) if p else (jsonify({'error': 'Not found'}), 404)
+            if request.method == 'PUT':
+                ok = db.update_product(product_id, request.json or {})
+                return jsonify({'success': ok}) if ok else (jsonify({'error': 'Not found'}), 404)
+            if request.method == 'DELETE':
+                ok = db.delete_product(product_id)
+                return jsonify({'success': ok}) if ok else (jsonify({'error': 'Not found'}), 404)
+        except Exception as e:
+            logger.error(f"Product detail error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Simple cart using session id in query/body ---
+    @app.route('/api/cart', methods=['GET', 'POST', 'DELETE'])
+    def api_cart():
+        db = DatabaseManager()
+        sid = request.args.get('sid') or (request.json or {}).get('sid')
+        if not sid:
+            return jsonify({'error': 'sid required'}), 400
+        try:
+            if request.method == 'POST':
+                data = request.json or {}
+                db.add_to_cart(sid, int(data.get('product_id')), int(data.get('quantity') or 1))
+                return jsonify({'success': True})
+            if request.method == 'DELETE':
+                item_id = int((request.json or {}).get('item_id'))
+                db.remove_cart_item(sid, item_id)
+                return jsonify({'success': True})
+            # GET
+            return jsonify(db.list_cart(sid))
+        except Exception as e:
+            logger.error(f"Cart error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Minimal public storefront ---
+    @app.route('/store')
+    def storefront():
+        try:
+            return render_template('storefront.html')
+        except Exception as e:
+            logger.error(f"Storefront error: {e}")
+            return jsonify({'error': f'Storefront error: {str(e)}'}), 500
+    # --- Stripe Checkout ---
+    @app.route('/api/pay/checkout_session', methods=['POST'])
+    def api_create_checkout_session():
+        try:
+            if not stripe.api_key:
+                return jsonify({'error': 'Stripe not configured'}), 400
+            data = request.json or {}
+            amount_cents = int(float(data.get('amount', 0)) * 100)
+            if amount_cents <= 0:
+                return jsonify({'error': 'Invalid amount'}), 400
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                mode='payment',
+                success_url=data.get('success_url') or request.host_url.rstrip('/') + '/web/',
+                cancel_url=data.get('cancel_url') or request.host_url.rstrip('/') + '/web/',
+                line_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {'name': data.get('name', 'Subscription')},
+                        'unit_amount': amount_cents,
+                    },
+                    'quantity': 1,
+                }]
+            )
+            return jsonify({'id': session.id, 'url': session.url})
+        except Exception as e:
+            logger.error(f"Stripe checkout error: {e}")
+            return jsonify({'error': str(e)}), 500
     
     @app.route('/api/jobs/<job_id>/pause', methods=['POST'])
     def api_pause_job(job_id):
@@ -397,6 +851,62 @@ def create_app():
         except Exception as e:
             logger.error(f"Config page error: {e}")
             return jsonify({'error': f'Config page error: {str(e)}'}), 500
+
+    @app.route('/coupons')
+    def coupons_page():
+        try:
+            return render_template('coupons.html')
+        except Exception as e:
+            logger.error(f"Coupons page error: {e}")
+            return jsonify({'error': f'Coupons page error: {str(e)}'}), 500
+
+    @app.route('/drivers')
+    def drivers_page():
+        try:
+            return render_template('drivers.html')
+        except Exception as e:
+            logger.error(f"Drivers page error: {e}")
+            return jsonify({'error': f'Drivers page error: {str(e)}'}), 500
+
+    @app.route('/track')
+    def track_order_page():
+        try:
+            return render_template('track.html')
+        except Exception as e:
+            logger.error(f"Track page error: {e}")
+            return jsonify({'error': f'Track page error: {str(e)}'}), 500
+
+    @app.route('/warehouses')
+    def warehouses_page():
+        try:
+            return render_template('warehouses.html')
+        except Exception as e:
+            logger.error(f"Warehouses page error: {e}")
+            return jsonify({'error': f'Warehouses page error: {str(e)}'}), 500
+
+    @app.route('/notifications')
+    def notifications_page():
+        try:
+            return render_template('notifications.html')
+        except Exception as e:
+            logger.error(f"Notifications page error: {e}")
+            return jsonify({'error': f'Notifications page error: {str(e)}'}), 500
+
+    @app.route('/loyalty')
+    def loyalty_page():
+        try:
+            return render_template('loyalty.html')
+        except Exception as e:
+            logger.error(f"Loyalty page error: {e}")
+            return jsonify({'error': f'Loyalty page error: {str(e)}'}), 500
+
+    @app.route('/products')
+    def products_page():
+        try:
+            return render_template('products.html')
+        except Exception as e:
+            logger.error(f"Products page error: {e}")
+            return jsonify({'error': f'Products page error: {str(e)}'}), 500
     
     @app.errorhandler(404)
     def not_found(error):

@@ -184,7 +184,14 @@ class DataCleaner:
         
         for column in string_columns:
             # Skip columns that appear to contain JSON or complex data
-            if df[column].str.contains('{').any() or df[column].str.contains('[').any():
+            # Use regex=False to avoid invalid regex for characters like '['
+            try:
+                has_brace = df[column].str.contains('{', regex=False).any()
+                has_bracket = df[column].str.contains('[', regex=False).any()
+            except Exception:
+                has_brace = False
+                has_bracket = False
+            if has_brace or has_bracket:
                 continue
                 
             # Strip whitespace and standardize case

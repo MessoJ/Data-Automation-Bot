@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Loyalty - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Loyalty Program</h1>
+
+  <div class="card mb-6">
+    <div class="card-header"><h2 class="card-title">Lookup Balance</h2></div>
+    <div class="card-body d-grid" style="grid-template-columns: 1fr auto; gap: var(--space-4);">
+      <input id="lyEmail" class="form-control" placeholder="Customer Email" />
+      <button class="btn btn-secondary" onclick="checkBalance()">Check</button>
+    </div>
+    <div class="card-footer">
+      <div id="lyBalance" class="text-sm"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Adjust Points</h2></div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="lyName" class="form-control" placeholder="Customer Name (optional)" />
+      <input id="lyPoints" type="number" class="form-control" placeholder="Points" />
+      <select id="lyAction" class="form-control">
+        <option value="earn">Earn</option>
+        <option value="redeem">Redeem</option>
+      </select>
+      <button class="btn btn-primary" onclick="adjustPoints()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function checkBalance() {
+  const email = document.getElementById('lyEmail').value.trim();
+  if (!email) { showGlobalToast('Enter email', 'warning'); return; }
+  const res = await fetch(`/api/loyalty/balance?email=${encodeURIComponent(email)}`);
+  const data = await res.json();
+  if (!res.ok) { showGlobalToast(data.error || 'Failed', 'error'); return; }
+  document.getElementById('lyBalance').textContent = `Points: ${data.points}`;
+}
+
+async function adjustPoints() {
+  const email = document.getElementById('lyEmail').value.trim();
+  const points = parseInt(document.getElementById('lyPoints').value || '0', 10);
+  const name = document.getElementById('lyName').value.trim();
+  const action = document.getElementById('lyAction').value;
+  if (!email || !points) { showGlobalToast('Enter email and points', 'warning'); return; }
+  const payload = { email, points, name, reason: action };
+  const url = action === 'earn' ? '/api/loyalty/earn' : '/api/loyalty/redeem';
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) { showGlobalToast(data.error || 'Failed', 'error'); return; }
+  showGlobalToast('Updated', 'success');
+  document.getElementById('lyBalance').textContent = `Points: ${data.points}`;
+}
+</script>
+{% endblock %}
+

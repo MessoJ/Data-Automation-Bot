@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Track Order - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Track Order</h1>
+
+  <div class="card mb-6">
+    <div class="card-body d-grid" style="grid-template-columns: 1fr auto; gap: var(--space-4);">
+      <input id="trackNumber" class="form-control" placeholder="Enter order number (e.g., ORD-169158)" />
+      <button class="btn btn-primary" onclick="trackOrder()">Track</button>
+    </div>
+  </div>
+
+  <div id="trackResult" class="card" style="display: none;">
+    <div class="card-header">
+      <h2 class="card-title">Status</h2>
+    </div>
+    <div class="card-body">
+      <div id="trackDetails"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function trackOrder() {
+  const num = document.getElementById('trackNumber').value.trim();
+  if (!num) { showGlobalToast('Please enter order number', 'warning'); return; }
+  try {
+    const res = await fetch(`/api/orders/track/${encodeURIComponent(num)}`);
+    const data = await res.json();
+    if (res.ok) {
+      const det = document.getElementById('trackDetails');
+      det.innerHTML = `
+        <p><strong>Order:</strong> ${data.order_number}</p>
+        <p><strong>Status:</strong> ${data.status}</p>
+        <p><strong>Total:</strong> $${Number(data.total_amount || 0).toFixed(2)}</p>
+        ${data.assignment ? `<p><strong>Delivery Status:</strong> ${data.assignment.status}</p>` : '<p>No driver assignment yet</p>'}
+      `;
+      document.getElementById('trackResult').style.display = 'block';
+    } else {
+      showGlobalToast(data.error || 'Order not found', 'error');
+      document.getElementById('trackResult').style.display = 'none';
+    }
+  } catch (e) {
+    showGlobalToast('Failed to track order', 'error');
+  }
+}
+</script>
+{% endblock %}
+

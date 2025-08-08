@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Products - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Products</h1>
+
+  <div class="card mb-6">
+    <div class="card-header"><h2 class="card-title">Add Product</h2></div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="pSku" class="form-control" placeholder="SKU" />
+      <input id="pName" class="form-control" placeholder="Name" />
+      <input id="pPrice" type="number" class="form-control" placeholder="Price" />
+      <input id="pCurrency" class="form-control" placeholder="Currency" value="USD" />
+      <input id="pDesc" class="form-control" placeholder="Description" />
+      <label class="d-flex items-center gap-2" style="align-self: center;">
+        <input id="pActive" type="checkbox" checked /> Active
+      </label>
+      <button class="btn btn-primary" onclick="createProduct()">Create</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Catalog</h2>
+      <button class="btn btn-sm btn-secondary" onclick="loadProducts()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prodTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadProducts() {
+  const res = await fetch('/api/products');
+  const data = await res.json();
+  const tbody = document.getElementById('prodTbody');
+  const list = data.products || [];
+  if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="5">No products</td></tr>'; return; }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td>${p.sku || ''}</td>
+      <td>${p.name}</td>
+      <td>${p.price} ${p.currency}</td>
+      <td>${p.active ? 'Active' : 'Inactive'}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="toggleProduct(${p.id}, ${p.active ? 'false' : 'true'})">${p.active ? 'Disable' : 'Enable'}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function createProduct() {
+  const payload = {
+    sku: document.getElementById('pSku').value.trim(),
+    name: document.getElementById('pName').value.trim(),
+    price: parseFloat(document.getElementById('pPrice').value || '0'),
+    currency: document.getElementById('pCurrency').value.trim() || 'USD',
+    description: document.getElementById('pDesc').value.trim(),
+    active: document.getElementById('pActive').checked
+  };
+  const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data.success) { showGlobalToast('Product created', 'success'); loadProducts(); } else { showGlobalToast('Failed', 'error'); }
+}
+
+async function toggleProduct(id, active) {
+  const res = await fetch(`/api/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }) });
+  const data = await res.json();
+  if (data.success) { loadProducts(); }
+}
+
+async function deleteProduct(id) {
+  const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) { loadProducts(); }
+}
+
+document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+{% endblock %}
+

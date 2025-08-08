@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Notifications</h1>
+
+  <div class="card mb-6">
+    <div class="card-header"><h2 class="card-title">Create Notification</h2></div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="ntTitle" class="form-control" placeholder="Title" />
+      <input id="ntMessage" class="form-control" placeholder="Message" />
+      <select id="ntLevel" class="form-control">
+        <option value="info">Info</option>
+        <option value="success">Success</option>
+        <option value="warning">Warning</option>
+        <option value="error">Error</option>
+      </select>
+      <button class="btn btn-primary" onclick="createNotification()">Create</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent</h2>
+      <button class="btn btn-sm btn-secondary" onclick="loadNotifications()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <div id="ntList" class="d-grid" style="gap: var(--space-3);"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadNotifications() {
+  const res = await fetch('/api/notifications');
+  const data = await res.json();
+  const list = data.notifications || [];
+  const ntList = document.getElementById('ntList');
+  if (list.length === 0) { ntList.innerHTML = '<div class="text-sm">No notifications</div>'; return; }
+  ntList.innerHTML = list.map(n => `
+    <div class="card" style="border-left: 4px solid ${levelColor(n.level)};">
+      <div class="card-body d-flex items-center justify-between">
+        <div>
+          <div class="font-semibold">${n.title}</div>
+          <div class="text-sm" style="color: var(--neutral-600);">${n.message}</div>
+        </div>
+        <div class="d-flex items-center gap-2">
+          <span class="text-sm" style="color: var(--neutral-500);">${new Date(n.created_at).toLocaleString()}</span>
+          ${n.is_read ? '' : `<button class="btn btn-sm btn-secondary" onclick="markRead(${n.id})">Mark read</button>`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function levelColor(level) {
+  return {
+    success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6'
+  }[level] || '#3b82f6';
+}
+
+async function createNotification() {
+  const payload = {
+    title: document.getElementById('ntTitle').value.trim(),
+    message: document.getElementById('ntMessage').value.trim(),
+    level: document.getElementById('ntLevel').value
+  };
+  const res = await fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data.success) { showGlobalToast('Created', 'success'); loadNotifications(); } else { showGlobalToast('Failed', 'error'); }
+}
+
+async function markRead(id) {
+  const res = await fetch(`/api/notifications/read/${id}`, { method: 'POST' });
+  const data = await res.json();
+  if (data.success) { loadNotifications(); }
+}
+
+document.addEventListener('DOMContentLoaded', loadNotifications);
+</script>
+{% endblock %}
+

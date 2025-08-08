@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Warehouses - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Warehouses</h1>
+
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Add Warehouse</h2>
+    </div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="whName" class="form-control" placeholder="Name" />
+      <input id="whAddress" class="form-control" placeholder="Address" />
+      <input id="whCity" class="form-control" placeholder="City" />
+      <button class="btn btn-primary" onclick="addWarehouse()">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Warehouses</h2>
+      <button class="btn btn-sm btn-secondary" onclick="loadWarehouses()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>City</th>
+          </tr>
+        </thead>
+        <tbody id="whTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadWarehouses() {
+  const res = await fetch('/api/warehouses');
+  const data = await res.json();
+  const tbody = document.getElementById('whTbody');
+  const list = data.warehouses || [];
+  if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="3">No warehouses</td></tr>'; return; }
+  tbody.innerHTML = list.map(w => `<tr><td>${w.name}</td><td>${w.address || ''}</td><td>${w.city || ''}</td></tr>`).join('');
+}
+
+async function addWarehouse() {
+  try {
+    const payload = { name: document.getElementById('whName').value.trim(), address: document.getElementById('whAddress').value.trim(), city: document.getElementById('whCity').value.trim() };
+    const res = await fetch('/api/warehouses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) { showGlobalToast('Warehouse added', 'success'); loadWarehouses(); }
+    else { showGlobalToast('Failed to add warehouse', 'error'); }
+  } catch (e) { showGlobalToast('Failed to add warehouse', 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', loadWarehouses);
+</script>
+{% endblock %}
+

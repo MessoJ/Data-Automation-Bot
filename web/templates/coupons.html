@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Coupons - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Coupon Management</h1>
+
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Create Coupon</h2>
+    </div>
+    <div class="card-body">
+      <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+        <input id="cpCode" class="form-control" placeholder="Code (e.g., SAVE10)" />
+        <input id="cpName" class="form-control" placeholder="Name" />
+        <select id="cpType" class="form-control">
+          <option value="percent">Percent</option>
+          <option value="fixed">Fixed Amount</option>
+        </select>
+        <input id="cpAmount" type="number" class="form-control" placeholder="Amount" />
+        <input id="cpStart" type="datetime-local" class="form-control" />
+        <input id="cpEnd" type="datetime-local" class="form-control" />
+        <label class="d-flex items-center gap-2" style="align-self: center;">
+          <input id="cpActive" type="checkbox" checked /> Active
+        </label>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" onclick="createCoupon()">Create Coupon</button>
+    </div>
+  </div>
+
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Apply Coupon</h2>
+    </div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="apCode" class="form-control" placeholder="Code" />
+      <input id="apAmount" type="number" class="form-control" placeholder="Cart Amount (e.g., 100)" />
+      <button class="btn btn-secondary" onclick="applyCoupon()">Apply</button>
+    </div>
+    <div class="card-footer">
+      <div id="applyResult" class="text-sm"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Coupons</h2>
+      <button class="btn btn-sm btn-secondary" onclick="loadCoupons()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Active</th>
+            <th>Usage</th>
+            <th>Start</th>
+            <th>End</th>
+          </tr>
+        </thead>
+        <tbody id="couponsTbody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadCoupons() {
+  try {
+    const res = await fetch('/api/coupons');
+    const data = await res.json();
+    const tbody = document.getElementById('couponsTbody');
+    if (!Array.isArray(data.coupons) || data.coupons.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8">No coupons</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.coupons.map(c => `
+      <tr>
+        <td>${c.code}</td>
+        <td>${c.name || ''}</td>
+        <td>${c.discount_type}</td>
+        <td>${c.amount}</td>
+        <td>${c.active ? 'Yes' : 'No'}</td>
+        <td>${c.usage_count || 0}</td>
+        <td>${c.start_date ? new Date(c.start_date).toLocaleString() : '-'}</td>
+        <td>${c.end_date ? new Date(c.end_date).toLocaleString() : '-'}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    showGlobalToast('Failed to load coupons', 'error');
+  }
+}
+
+async function createCoupon() {
+  try {
+    const payload = {
+      code: document.getElementById('cpCode').value.trim(),
+      name: document.getElementById('cpName').value.trim(),
+      discount_type: document.getElementById('cpType').value,
+      amount: parseFloat(document.getElementById('cpAmount').value || '0'),
+      active: document.getElementById('cpActive').checked,
+      start_date: document.getElementById('cpStart').value || null,
+      end_date: document.getElementById('cpEnd').value || null
+    };
+    const res = await fetch('/api/coupons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showGlobalToast('Coupon created', 'success');
+      loadCoupons();
+    } else {
+      showGlobalToast(data.error || 'Failed to create coupon', 'error');
+    }
+  } catch (e) {
+    showGlobalToast('Failed to create coupon', 'error');
+  }
+}
+
+async function applyCoupon() {
+  try {
+    const payload = {
+      code: document.getElementById('apCode').value.trim(),
+      amount: parseFloat(document.getElementById('apAmount').value || '0')
+    };
+    const res = await fetch('/api/coupons/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const target = document.getElementById('applyResult');
+    if (data.success) {
+      target.textContent = `Applied ${data.code}: discount ${data.discount}, total ${data.total}`;
+      showGlobalToast('Coupon applied', 'success');
+    } else {
+      target.textContent = data.message || 'Failed to apply coupon';
+      showGlobalToast(target.textContent, 'warning');
+    }
+  } catch (e) {
+    showGlobalToast('Failed to apply coupon', 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadCoupons);
+</script>
+{% endblock %}
+

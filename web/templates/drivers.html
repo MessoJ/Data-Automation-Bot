@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Drivers - E-commerce Data Automation{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-6);">
+  <h1 class="mb-4">Drivers</h1>
+
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Add Driver</h2>
+    </div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="drvName" class="form-control" placeholder="Driver Name" />
+      <input id="drvPhone" class="form-control" placeholder="Phone" />
+      <button class="btn btn-primary" onclick="addDriver()">Add</button>
+    </div>
+  </div>
+
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Assign Driver to Order</h2>
+    </div>
+    <div class="card-body d-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+      <input id="assignOrder" class="form-control" placeholder="Order Number" />
+      <select id="assignDriver" class="form-control"></select>
+      <button class="btn btn-secondary" onclick="createAssignment()">Assign</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Driver Roster</h2>
+      <button class="btn btn-sm btn-secondary" onclick="loadDrivers()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="driversTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadDrivers() {
+  const res = await fetch('/api/drivers');
+  const data = await res.json();
+  const list = data.drivers || [];
+  const tbody = document.getElementById('driversTbody');
+  const select = document.getElementById('assignDriver');
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">No drivers yet</td></tr>';
+    select.innerHTML = '<option value="">No drivers</option>';
+    return;
+  }
+  tbody.innerHTML = list.map(d => `
+    <tr>
+      <td>${d.name}</td>
+      <td><a href="tel:${d.phone}">${d.phone || ''}</a></td>
+      <td>${d.status}</td>
+      <td>
+        <a title="Call" href="tel:${d.phone}" class="btn btn-sm btn-secondary">📞</a>
+      </td>
+    </tr>
+  `).join('');
+  select.innerHTML = list.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+async function addDriver() {
+  try {
+    const payload = { name: document.getElementById('drvName').value.trim(), phone: document.getElementById('drvPhone').value.trim() };
+    const res = await fetch('/api/drivers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) {
+      showGlobalToast('Driver added', 'success');
+      loadDrivers();
+    } else {
+      showGlobalToast('Failed to add driver', 'error');
+    }
+  } catch (e) { showGlobalToast('Failed to add driver', 'error'); }
+}
+
+async function createAssignment() {
+  try {
+    const payload = { order_number: document.getElementById('assignOrder').value.trim(), driver_id: document.getElementById('assignDriver').value };
+    const res = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) { showGlobalToast('Assignment created', 'success'); } else { showGlobalToast(data.error || 'Failed', 'error'); }
+  } catch (e) { showGlobalToast('Failed to assign', 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', loadDrivers);
+</script>
+{% endblock %}
+

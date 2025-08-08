@@ -9,5 +9,5 @@ body { @apply bg-neutral-950 text-neutral-100 antialiased; }
 /* Reusable cards */
 .card { @apply rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm; }
 .btn { @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition; }
-.btn-primary { @apply bg-brand text-white hover:bg-brand-dark; }
+.btn-primary { @apply bg-brand text-white hover:bg-brand-600; }
 .btn-secondary { @apply bg-neutral-800 text-neutral-100 hover:bg-neutral-700; }

@@ -50,7 +50,7 @@ def create_app():
     except Exception as db_ex:
         logger.warning(f"Database initialization issue: {db_ex}")
     report_generator = ReportGenerator()
-    job_scheduler = JobScheduler()
+    # Do not instantiate/start scheduler here to avoid duplicate instances under reloader
     api_client = APIClient()
 
     # Stripe configuration
@@ -111,8 +111,8 @@ def create_app():
     def api_status():
         try:
             db = DatabaseManager()
-            job_scheduler = JobScheduler()
-            jobs = job_scheduler.get_jobs() if job_scheduler.is_running() else []
+            job_scheduler = JobScheduler.instance(create_if_missing=False)
+            jobs = job_scheduler.get_jobs() if (job_scheduler and job_scheduler.is_running()) else []
             api_client = APIClient()
             # Notifications summary
             with db.get_session() as session:

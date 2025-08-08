@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+# Module-level singleton reference
+_SCHEDULER_SINGLETON = None
+
 class JobScheduler:
     """
     Manages scheduling and execution of automated data processing jobs.
@@ -28,6 +31,27 @@ class JobScheduler:
         )
         self._running = False
         logger.info("Job scheduler initialized")
+
+        # Register as singleton if not set
+        global _SCHEDULER_SINGLETON
+        if _SCHEDULER_SINGLETON is None:
+            _SCHEDULER_SINGLETON = self
+
+    @classmethod
+    def instance(cls, create_if_missing: bool = True) -> "JobScheduler":
+        """
+        Get the singleton scheduler instance.
+
+        Args:
+            create_if_missing: Create a new instance if one does not exist
+
+        Returns:
+            The singleton JobScheduler instance, or None if not created
+        """
+        global _SCHEDULER_SINGLETON
+        if _SCHEDULER_SINGLETON is None and create_if_missing:
+            _SCHEDULER_SINGLETON = cls()
+        return _SCHEDULER_SINGLETON
     
     def start(self):
         """

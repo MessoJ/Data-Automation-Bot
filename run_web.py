@@ -37,17 +37,23 @@ def main():
 
         app = create_app()
 
-        # Bring up scheduler in background
+        # Bring up scheduler in background (only in the reloader child which serves requests)
         try:
-            scheduler = JobScheduler()
-            scheduler.add_job(
-                "data_processing",
-                process_data_job,
-                trigger='interval',
-                seconds=config.SCHEDULER_INTERVAL
-            )
-            scheduler.start()
-            logger.info("Scheduler started with data_processing job")
+            # When Flask debug reloader is on, the child process handles serving requests
+            is_reloader_child = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
+
+            if is_reloader_child or not os.environ.get('FLASK_ENV'):
+                scheduler = JobScheduler.instance()
+                scheduler.add_job(
+                    "data_processing",
+                    process_data_job,
+                    trigger='interval',
+                    seconds=config.SCHEDULER_INTERVAL
+                )
+                scheduler.start()
+                logger.info("Scheduler started with data_processing job")
+            else:
+                logger.info("Detected Flask reloader parent process; skipping scheduler start")
         except Exception as sch_ex:
             logger.warning(f"Scheduler not started: {sch_ex}")
         

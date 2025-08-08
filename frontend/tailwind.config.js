@@ -11,6 +11,8 @@ export default {
         brand: {
           DEFAULT: '#16a085',
           dark: '#0e806a',
+          foreground: '#e6fffa',
+          muted: '#195e55'
         },
       },
     },

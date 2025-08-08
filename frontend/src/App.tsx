@@ -98,7 +98,14 @@ function JobsPage() {
                 <div className="font-medium">{j.name ?? j.id}</div>
                 <div className="text-xs text-neutral-400">Next: {j.next_run ? new Date(j.next_run).toLocaleString() : '—'}</div>
               </div>
-              <button className="btn btn-secondary" onClick={() => alert('Pause/Resume not implemented')}>Pause</button>
+              <button className="btn btn-secondary" onClick={async () => {
+                try {
+                  await fetch(`/api/jobs/${j.id}/${j.paused ? 'resume' : 'pause'}`, { method: 'POST' })
+                  location.reload()
+                } catch (e) {
+                  alert('Action failed')
+                }
+              }}>{j.paused ? 'Resume' : 'Pause'}</button>
             </div>
           ))}
       </div>
@@ -134,8 +141,8 @@ function ProductsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Products</h1>
         <div className="flex gap-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="bg-neutral-900 border border-neutral-800 rounded px-3 py-2" />
-          <input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU" className="bg-neutral-900 border border-neutral-800 rounded px-3 py-2" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="input" />
+          <input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU" className="input" />
           <button className="btn btn-primary" onClick={async () => {
             await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, sku }) })
             setName(''); setSku(''); location.reload()
@@ -157,6 +164,19 @@ function ProductsPage() {
   )
 }
 
+function ThemeToggle() {
+  const [dark, setDark] = useState<boolean>(() => document.documentElement.classList.contains('dark'))
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch {}
+  }, [dark])
+  return (
+    <button className="btn btn-secondary" onClick={() => setDark((d) => !d)}>
+      {dark ? 'Light' : 'Dark'}
+    </button>
+  )
+}
+
 function Layout() {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
@@ -170,6 +190,9 @@ function Layout() {
             <NavItem to="/config" label="Settings" />
             <NavItem to="/products" label="Products" />
           </nav>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">

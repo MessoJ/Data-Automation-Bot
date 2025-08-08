@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import hashlib
 import re
-import pandas as pd
+# import pandas as pd  # Avoid importing at module load to keep web lightweight
 
 # Set up logging
 logging.basicConfig(
@@ -250,6 +250,7 @@ def setup_logging(log_file="data_automation.log", level=logging.INFO):
             logging.StreamHandler()
         ]
     )
+
 def read_data_file(file_path):
     """
     Read data from various file types into a pandas DataFrame.
@@ -265,8 +266,8 @@ def read_data_file(file_path):
         Data from the file
     """
     file_type = detect_file_type(file_path)
-    
     try:
+        import pandas as pd  # Lazy import
         if file_type == 'csv':
             return pd.read_csv(file_path)
         elif file_type == 'excel':
@@ -282,4 +283,8 @@ def read_data_file(file_path):
             return pd.DataFrame()
     except Exception as e:
         logging.error(f"Error reading file {file_path}: {e}")
-        return pd.DataFrame()
+        try:
+            import pandas as pd
+            return pd.DataFrame()
+        except Exception:
+            return None

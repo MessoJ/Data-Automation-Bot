@@ -26,7 +26,7 @@ from database.db_manager import (
     InventoryItem,
     Product,
 )
-from reporting.report_generator import ReportGenerator
+# Avoid importing reporting at app import time to prevent heavy deps (pandas)
 from scheduler.job_scheduler import JobScheduler
 from api.api_client import APIClient
 import config
@@ -49,7 +49,7 @@ def create_app():
         db_manager.initialize_database()
     except Exception as db_ex:
         logger.warning(f"Database initialization issue: {db_ex}")
-    report_generator = ReportGenerator()
+    # Lazy-init heavy components where needed to avoid optional deps at startup
     job_scheduler = JobScheduler()
     api_client = APIClient()
 
@@ -89,6 +89,14 @@ def create_app():
         except Exception as e:
             logger.error(f"Dashboard error: {e}")
             return jsonify({'error': f'Dashboard error: {str(e)}'}), 500
+
+    @app.route('/stores')
+    def stores_page():
+        try:
+            return render_template('stores.html')
+        except Exception as e:
+            logger.error(f"Stores page error: {e}")
+            return jsonify({'error': f'Stores page error: {str(e)}'}), 500
 
     @app.route('/checkout')
     def checkout_page():
@@ -710,7 +718,115 @@ def create_app():
             logger.error(f"Product detail error: {e}")
             return jsonify({'error': str(e)}), 500
 
-    # --- Simple cart using session id in query/body ---
+    # --- Store management ---
+    @app.route('/api/stores', methods=['GET', 'POST'])
+    def api_stores():
+        db = DatabaseManager()
+        try:
+            if request.method == 'POST':
+                data = request.json or {}
+                sid = db.create_or_update_store(data)
+                return jsonify({'success': True, 'id': sid})
+            return jsonify({'stores': db.list_stores()})
+        except Exception as e:
+            logger.error(f"Stores error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stores/<int:store_id>', methods=['GET', 'PUT'])
+    def api_store_detail(store_id: int):
+        db = DatabaseManager()
+        try:
+            if request.method == 'GET':
+                s = db.get_store_by_domain_or_id(store_id)
+                return (jsonify(s), 200) if s else (jsonify({'error': 'Not found'}), 404)
+            if request.method == 'PUT':
+                data = request.json or {}
+                data['id'] = store_id
+                sid = db.create_or_update_store(data)
+                return jsonify({'success': True, 'id': sid})
+        except Exception as e:
+            logger.error(f"Store detail error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Discount rules per-store ---
+    @app.route('/api/stores/<int:store_id>/discount_rules', methods=['GET', 'POST'])
+    def api_discount_rules(store_id: int):
+        db = DatabaseManager()
+        try:
+            from database.db_manager import DiscountRule
+            if request.method == 'POST':
+                data = request.json or {}
+                with db.get_session() as session:
+                    rule = DiscountRule(
+                        store_id=store_id,
+                        name=data.get('name'),
+                        scope=data.get('scope', 'product'),
+                        selector=data.get('selector'),
+                        type=data.get('type', 'percent'),
+                        amount=float(data.get('amount') or 0.0),
+                        active=bool(data.get('active', True)),
+                    )
+                    session.add(rule)
+                    session.flush()
+                    return jsonify({'success': True, 'id': rule.id})
+            else:
+                with db.get_session() as session:
+                    items = session.query(DiscountRule).filter(DiscountRule.store_id == store_id).order_by(DiscountRule.created_at.desc()).all()
+                    return jsonify({'rules': [
+                        {
+                            'id': r.id,
+                            'name': r.name,
+                            'scope': r.scope,
+                            'selector': r.selector,
+                            'type': r.type,
+                            'amount': r.amount,
+                            'active': r.active,
+                        } for r in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Discount rules error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Shipping rules per-store ---
+    @app.route('/api/stores/<int:store_id>/shipping_rules', methods=['GET', 'POST'])
+    def api_shipping_rules(store_id: int):
+        db = DatabaseManager()
+        try:
+            from database.db_manager import ShippingRule
+            if request.method == 'POST':
+                data = request.json or {}
+                with db.get_session() as session:
+                    rule = ShippingRule(
+                        store_id=store_id,
+                        name=data.get('name'),
+                        min_subtotal=float(data.get('min_subtotal') or 0.0),
+                        max_subtotal=float(data['max_subtotal']) if data.get('max_subtotal') is not None else None,
+                        rate=float(data.get('rate') or 0.0),
+                        provider=data.get('provider', 'flat'),
+                        active=bool(data.get('active', True)),
+                    )
+                    session.add(rule)
+                    session.flush()
+                    return jsonify({'success': True, 'id': rule.id})
+            else:
+                with db.get_session() as session:
+                    items = session.query(ShippingRule).filter(ShippingRule.store_id == store_id).order_by(ShippingRule.min_subtotal.asc()).all()
+                    return jsonify({'rules': [
+                        {
+                            'id': r.id,
+                            'name': r.name,
+                            'min_subtotal': r.min_subtotal,
+                            'max_subtotal': r.max_subtotal,
+                            'rate': r.rate,
+                            'provider': r.provider,
+                            'active': r.active,
+                        } for r in items
+                    ]})
+        except Exception as e:
+            logger.error(f"Shipping rules error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Simple cart using session id in query/body, with totals ---
     @app.route('/api/cart', methods=['GET', 'POST', 'DELETE'])
     def api_cart():
         db = DatabaseManager()
@@ -732,14 +848,34 @@ def create_app():
             logger.error(f"Cart error: {e}")
             return jsonify({'error': str(e)}), 500
 
-    # --- Minimal public storefront ---
-    @app.route('/store')
-    def storefront():
+    # --- Minimal public storefront with themes and store resolution ---
+    @app.route('/store/')
+    @app.route('/store/<path:key>')
+    def storefront(key: str = None):
         try:
-            return render_template('storefront.html')
+            db = DatabaseManager()
+            store = None
+            # Resolve store by domain or id from path or Host header
+            if key:
+                # allow numeric id or domain
+                if key.isdigit():
+                    store = db.get_store_by_domain_or_id(int(key))
+                else:
+                    store = db.get_store_by_domain_or_id(key)
+            if not store:
+                host = request.host.split(':')[0]
+                store = db.get_store_by_domain_or_id(host)
+            theme = request.args.get('theme') or (store.get('theme') if store else 'default')
+            template_name = f"themes/{theme}/storefront.html"
+            # fallback to default template if theme not present
+            try:
+                return render_template(template_name, store=store)
+            except Exception:
+                return render_template('storefront.html', store=store)
         except Exception as e:
             logger.error(f"Storefront error: {e}")
             return jsonify({'error': f'Storefront error: {str(e)}'}), 500
+
     # --- Stripe Checkout ---
     @app.route('/api/pay/checkout_session', methods=['POST'])
     def api_create_checkout_session():
@@ -758,15 +894,47 @@ def create_app():
                 line_items=[{
                     'price_data': {
                         'currency': 'usd',
-                        'product_data': {'name': data.get('name', 'Subscription')},
+                        'product_data': {'name': data.get('name', 'Order')},
                         'unit_amount': amount_cents,
                     },
                     'quantity': 1,
-                }]
+                }],
+                metadata={
+                    'sid': (data.get('sid') or ''),
+                }
             )
             return jsonify({'id': session.id, 'url': session.url})
         except Exception as e:
             logger.error(f"Stripe checkout error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Stripe webhook to confirm payments and create Order ---
+    @app.route('/api/pay/webhook', methods=['POST'])
+    def stripe_webhook():
+        try:
+            payload = request.data
+            sig_header = request.headers.get('Stripe-Signature')
+            wh_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+            event = None
+            if wh_secret:
+                try:
+                    event = stripe.Webhook.construct_event(payload=payload, sig_header=sig_header, secret=wh_secret)
+                except Exception as e:
+                    logger.error(f"Webhook signature verification failed: {e}")
+                    return jsonify({'error': 'Invalid signature'}), 400
+            else:
+                event = json.loads(payload or b"{}")
+            etype = event.get('type') if isinstance(event, dict) else getattr(event, 'type', None)
+            if etype == 'checkout.session.completed':
+                session_obj = event['data']['object'] if isinstance(event, dict) else event.data.object
+                sid = (session_obj.get('metadata') or {}).get('sid') if isinstance(session_obj, dict) else (session_obj.metadata.sid if getattr(session_obj, 'metadata', None) else None)
+                if sid:
+                    db = DatabaseManager()
+                    oid = db.create_order_from_cart(sid, payment_metadata=session_obj)
+                    logger.info(f"Created order from cart via webhook: {oid}")
+            return jsonify({'received': True})
+        except Exception as e:
+            logger.error(f"Stripe webhook error: {e}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/jobs/<job_id>/pause', methods=['POST'])
@@ -932,6 +1100,76 @@ def create_app():
             <a href="/web/">Go to Dashboard</a>
             """, 500
     
+    # --- Session: current store context ---
+    @app.route('/api/session/store', methods=['GET', 'POST'])
+    def api_session_store():
+        try:
+            if request.method == 'POST':
+                data = request.json or {}
+                store_id = data.get('store_id')
+                # minimal validation
+                if not store_id:
+                    return jsonify({'error': 'store_id required'}), 400
+                # Save in Flask session cookie
+                from flask import session as flask_session
+                flask_session['current_store_id'] = int(store_id)
+                return jsonify({'success': True})
+            else:
+                from flask import session as flask_session
+                sid = flask_session.get('current_store_id')
+                return jsonify({'current_store_id': sid})
+        except Exception as e:
+            logger.error(f"Session store error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Store users & roles ---
+    @app.route('/api/stores/<int:store_id>/users', methods=['GET', 'POST'])
+    def api_store_users(store_id: int):
+        db = DatabaseManager()
+        try:
+            from database.db_manager import StoreUser
+            if request.method == 'POST':
+                data = request.json or {}
+                email = data.get('email')
+                role = data.get('role', 'staff')
+                if not email:
+                    return jsonify({'error': 'email required'}), 400
+                with db.get_session() as session:
+                    su = StoreUser(store_id=store_id, email=email, role=role)
+                    session.add(su)
+                    session.flush()
+                    return jsonify({'success': True, 'id': su.id})
+            else:
+                with db.get_session() as session:
+                    items = session.query(StoreUser).filter(StoreUser.store_id == store_id).all()
+                    return jsonify({'users': [
+                        {'id': u.id, 'email': u.email, 'role': u.role}
+                    for u in items]})
+        except Exception as e:
+            logger.error(f"Store users error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # --- Order lifecycle: update status ---
+    @app.route('/api/orders/<int:order_id>/status', methods=['POST'])
+    def api_order_update_status(order_id: int):
+        db = DatabaseManager()
+        try:
+            data = request.json or {}
+            new_status = data.get('status')
+            if not new_status:
+                return jsonify({'error': 'status required'}), 400
+            with db.get_session() as session:
+                from database.db_manager import Order
+                order = session.query(Order).get(order_id)
+                if not order:
+                    return jsonify({'error': 'Order not found'}), 404
+                order.status = new_status
+                session.add(order)
+                return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Order status update error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     return app
 
 

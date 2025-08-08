@@ -31,25 +31,26 @@ def main():
         
         # Import and create the Flask app
         from web.app import create_app
-        from scheduler.job_scheduler import JobScheduler
-        from main import process_data_job
         import config
 
         app = create_app()
 
-        # Bring up scheduler in background
-        try:
-            scheduler = JobScheduler()
-            scheduler.add_job(
-                "data_processing",
-                process_data_job,
-                trigger='interval',
-                seconds=config.SCHEDULER_INTERVAL
-            )
-            scheduler.start()
-            logger.info("Scheduler started with data_processing job")
-        except Exception as sch_ex:
-            logger.warning(f"Scheduler not started: {sch_ex}")
+        # Optionally bring up scheduler in background (disabled by default to avoid heavy deps)
+        if os.environ.get('ENABLE_SCHEDULER', '0') == '1':
+            try:
+                from scheduler.job_scheduler import JobScheduler
+                from main import process_data_job
+                scheduler = JobScheduler()
+                scheduler.add_job(
+                    "data_processing",
+                    process_data_job,
+                    trigger='interval',
+                    seconds=config.SCHEDULER_INTERVAL
+                )
+                scheduler.start()
+                logger.info("Scheduler started with data_processing job")
+            except Exception as sch_ex:
+                logger.warning(f"Scheduler not started: {sch_ex}")
         
         # Configuration
         host = os.environ.get('HOST', '0.0.0.0')

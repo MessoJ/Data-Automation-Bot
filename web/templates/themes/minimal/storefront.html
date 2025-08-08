@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}{{ (store.name if store else 'Store') }} - Minimal{% endblock %}
+
+{% block content %}
+<section class="theme-minimal" style="max-width:980px;margin:0 auto;padding:40px 20px;">
+  <header style="text-align:center;margin-bottom:24px;">
+    <h1 style="font-weight:800;letter-spacing:-0.02em;">{{ (store.name if store else 'Storefront') }}</h1>
+    <p style="color:#666">Beautiful products, minimal chrome.</p>
+  </header>
+  <div id="productsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;"></div>
+  <aside style="position:fixed;right:24px;top:96px;width:320px;background:#fff;border:1px solid #eee;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.06);">
+    <div style="padding:16px 16px 0 16px;"><h3 style="margin:0;">Cart</h3></div>
+    <div id="cartBody" style="padding:16px;">Your cart is empty</div>
+    <div style="padding:16px;border-top:1px solid #eee;">
+      <button class="btn btn-primary w-full" onclick="proceedCheckout()">Checkout</button>
+    </div>
+  </aside>
+</section>
+
+<script>
+const SID_KEY = 'store_sid';
+function getSid(){ let s=localStorage.getItem(SID_KEY); if(!s){s=Math.random().toString(36).slice(2); localStorage.setItem(SID_KEY,s);} return s; }
+
+async function loadProducts(){
+  const STORE_ID = {{ (store.id if store) else 'null' }};
+  const params = new URLSearchParams(window.location.search);
+  const sid = params.get('store_id') || (STORE_ID !== null ? STORE_ID : null);
+  const res = await fetch('/api/products' + (sid ? ('?store_id=' + encodeURIComponent(sid)) : ''));
+  const data = await res.json();
+  const grid = document.getElementById('productsGrid');
+  const list = (data.products||[]).filter(p=>p.active);
+  if(list.length===0){ grid.innerHTML='<div>No products yet</div>'; return; }
+  grid.innerHTML = list.map(p=>`
+    <div style="border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff;">
+      ${p.image_url?`<div style=\"aspect-ratio:4/3;background:#fafafa;display:flex;align-items:center;justify-content:center;\"><img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:100%"/></div>`:''}
+      <div style="padding:12px 14px;">
+        <div style="font-weight:700">${p.name}</div>
+        <div style="color:#666;font-size:14px;">${p.description||''}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <strong>${p.price} ${p.currency}</strong>
+          <button class="btn btn-sm btn-secondary" onclick="addToCart(${p.id})">Add</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addToCart(pid){
+  const res = await fetch('/api/cart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:getSid(),product_id:pid,quantity:1})});
+  const data = await res.json();
+  if(res.ok){ loadCart(); } else { console.warn(data); }
+}
+
+async function loadCart(){
+  const res = await fetch(`/api/cart?sid=${encodeURIComponent(getSid())}`);
+  const data = await res.json();
+  const body = document.getElementById('cartBody');
+  const items = data.items||[];
+  if(items.length===0){ body.textContent='Your cart is empty'; return; }
+  body.innerHTML = items.map(i=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>${i.name} x ${i.quantity}</div>
+      <div>${i.line_total.toFixed(2)} <button class="btn btn-sm btn-danger" style="margin-left:8px" onclick="removeItem(${i.id})">✖</button></div>
+    </div>
+  `).join('') + `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px"><span>Subtotal</span><strong>${(data.subtotal||0).toFixed(2)}</strong></div>
+    <div style="display:flex;align-items:center;justify-content:space-between"><span>Discounts</span><strong>-${(data.discount_total||0).toFixed(2)}</strong></div>
+    <div style="display:flex;align-items:center;justify-content:space-between"><span>Shipping</span><strong>${(data.shipping_total||0).toFixed(2)}</strong></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px"><strong>Total</strong><strong>${(data.total||0).toFixed(2)}</strong></div>`;
+}
+
+async function removeItem(id){ await fetch('/api/cart',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid:getSid(),item_id:id})}); loadCart(); }
+
+async function proceedCheckout(){
+  const cart = await (await fetch(`/api/cart?sid=${encodeURIComponent(getSid())}`)).json();
+  if(!cart.items || cart.items.length===0) return;
+  const res = await fetch('/api/pay/checkout_session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Order', amount:cart.total, success_url: window.location.origin + '/store', cancel_url: window.location.href, sid: getSid()})});
+  const data = await res.json(); if(res.ok && data.url){ window.location = data.url; }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ loadProducts(); loadCart(); });
+</script>
+{% endblock %}

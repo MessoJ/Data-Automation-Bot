@@ -124,6 +124,10 @@ class Order(Base):
     total_amount = sa.Column(sa.Float, default=0.0)
     created_at = sa.Column(sa.DateTime, default=datetime.now)
     store_id = sa.Column(sa.Integer, sa.ForeignKey("stores.id"), index=True, nullable=True)
+    payment_status = sa.Column(sa.String(50), default="unpaid")  # unpaid|paid|refunded|failed
+    shipping_total = sa.Column(sa.Float, default=0.0)
+    discount_total = sa.Column(sa.Float, default=0.0)
+    currency = sa.Column(sa.String(10), default="USD")
 
 
 class Driver(Base):
@@ -183,6 +187,8 @@ class Store(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String(150), nullable=False)
     domain = sa.Column(sa.String(200), unique=True)
+    theme = sa.Column(sa.String(50), default="default")
+    settings = sa.Column(sa.JSON)  # arbitrary store settings (shipping_rules, discount_rules, defaults)
     created_at = sa.Column(sa.DateTime, default=datetime.now)
 
 
@@ -208,6 +214,8 @@ class OrderItem(Base):
     product_id = sa.Column(sa.Integer, sa.ForeignKey("products.id"), index=True)
     quantity = sa.Column(sa.Integer, default=1)
     unit_price = sa.Column(sa.Float, default=0.0)
+    name = sa.Column(sa.String(200))
+    sku = sa.Column(sa.String(100))
 
 
 class Payment(Base):
@@ -231,6 +239,41 @@ class CartItem(Base):
     unit_price = sa.Column(sa.Float, default=0.0)
     created_at = sa.Column(sa.DateTime, default=datetime.now)
     store_id = sa.Column(sa.Integer, sa.ForeignKey("stores.id"), index=True, nullable=True)
+
+# --- Multi-tenant roles & auth scaffolding ---
+class StoreUser(Base):
+    __tablename__ = "store_users"
+    id = sa.Column(sa.Integer, primary_key=True)
+    store_id = sa.Column(sa.Integer, sa.ForeignKey("stores.id"), index=True)
+    email = sa.Column(sa.String(200), index=True)
+    role = sa.Column(sa.String(20), default="staff")  # owner|admin|staff
+    created_at = sa.Column(sa.DateTime, default=datetime.now)
+
+# --- Discount engine (rule-based) ---
+class DiscountRule(Base):
+    __tablename__ = "discount_rules"
+    id = sa.Column(sa.Integer, primary_key=True)
+    store_id = sa.Column(sa.Integer, sa.ForeignKey("stores.id"), index=True)
+    name = sa.Column(sa.String(150))
+    scope = sa.Column(sa.String(20), default="product")  # product|category|cart
+    selector = sa.Column(sa.JSON)  # e.g., {"product_ids": [1,2]} or {"categories": ["Shoes"]}
+    type = sa.Column(sa.String(20), default="percent")  # percent|fixed
+    amount = sa.Column(sa.Float, default=0.0)
+    active = sa.Column(sa.Boolean, default=True)
+    created_at = sa.Column(sa.DateTime, default=datetime.now)
+
+# --- Shipping calculators ---
+class ShippingRule(Base):
+    __tablename__ = "shipping_rules"
+    id = sa.Column(sa.Integer, primary_key=True)
+    store_id = sa.Column(sa.Integer, sa.ForeignKey("stores.id"), index=True)
+    name = sa.Column(sa.String(150))
+    min_subtotal = sa.Column(sa.Float, default=0.0)
+    max_subtotal = sa.Column(sa.Float)  # nullable means no upper bound
+    rate = sa.Column(sa.Float, default=0.0)  # flat rate for now
+    provider = sa.Column(sa.String(50), default="flat")  # flat|provider_key
+    active = sa.Column(sa.Boolean, default=True)
+    created_at = sa.Column(sa.DateTime, default=datetime.now)
 
 class DatabaseManager:
     """Manager for database operations."""
@@ -297,15 +340,16 @@ class DatabaseManager:
                 session.flush()
             return cust
 
-    def apply_coupon_to_amount(self, code: str, amount: float) -> Dict[str, Any]:
-        """Apply a coupon to a cart/order amount and return calculation details."""
+    def apply_coupon_to_amount(self, code: str, amount: float, store_id: Optional[int] = None) -> Dict[str, Any]:
+        """Apply a coupon to a cart/order amount and return calculation details.
+        If store_id is provided, prefer coupons scoped to that store; fall back to global coupons (store_id is NULL).
+        """
         now = datetime.now()
         with self.get_session() as session:
-            coupon: Optional[Coupon] = (
-                session.query(Coupon)
-                .filter(Coupon.code == code, Coupon.active == True)
-                .first()
-            )
+            query = session.query(Coupon).filter(Coupon.code == code, Coupon.active == True)
+            if store_id:
+                query = query.filter(sa.or_(Coupon.store_id == store_id, Coupon.store_id == None))
+            coupon: Optional[Coupon] = query.first()
             if not coupon:
                 return {"applied": False, "message": "Invalid or inactive coupon", "total": amount}
             if coupon.start_date and coupon.start_date > now:
@@ -412,7 +456,13 @@ class DatabaseManager:
             product = session.query(Product).get(product_id)
             if not product:
                 raise ValueError("Product not found")
-            item = CartItem(session_id=session_id, product_id=product_id, quantity=qty, unit_price=product.price)
+            item = CartItem(
+                session_id=session_id,
+                product_id=product_id,
+                quantity=qty,
+                unit_price=product.price,
+                store_id=product.store_id,
+            )
             session.add(item)
 
     def list_cart(self, session_id: str) -> Dict[str, Any]:
@@ -524,3 +574,223 @@ class DatabaseManager:
                 })
             
             return data_records
+
+    def get_store_by_domain_or_id(self, key: str | int) -> Optional[Dict[str, Any]]:
+        with self.get_session() as session:
+            q = session.query(Store)
+            store = None
+            if isinstance(key, int):
+                store = q.get(key)
+            else:
+                store = q.filter(Store.domain == str(key)).first()
+            if not store:
+                return None
+            return {
+                "id": store.id,
+                "name": store.name,
+                "domain": store.domain,
+                "theme": store.theme or "default",
+                "settings": store.settings or {},
+            }
+
+    def create_or_update_store(self, data: Dict[str, Any]) -> int:
+        with self.get_session() as session:
+            store = None
+            if data.get("id"):
+                store = session.query(Store).get(int(data["id"]))
+            if not store and data.get("domain"):
+                store = session.query(Store).filter(Store.domain == data["domain"]).first()
+            if not store:
+                store = Store(name=data.get("name") or "Store", domain=data.get("domain"))
+            if "name" in data:
+                store.name = data["name"]
+            if "domain" in data:
+                store.domain = data["domain"]
+            if "theme" in data:
+                store.theme = data["theme"]
+            if "settings" in data:
+                store.settings = data["settings"]
+            session.add(store)
+            session.flush()
+            return store.id
+
+    def list_stores(self) -> List[Dict[str, Any]]:
+        with self.get_session() as session:
+            items = session.query(Store).order_by(Store.created_at.desc()).all()
+            return [
+                {"id": s.id, "name": s.name, "domain": s.domain, "theme": s.theme, "created_at": s.created_at.isoformat()} for s in items
+            ]
+
+    def calculate_discounts(self, store_id: int, cart_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        with self.get_session() as session:
+            rules = (
+                session.query(DiscountRule)
+                .filter(DiscountRule.store_id == store_id, DiscountRule.active == True)
+                .all()
+            )
+            subtotal = sum(i["line_total"] for i in cart_items)
+            discount_total = 0.0
+            for rule in rules:
+                if rule.scope == "cart":
+                    if rule.type == "percent":
+                        discount_total += subtotal * (rule.amount / 100.0)
+                    else:
+                        discount_total += rule.amount
+                elif rule.scope in ("product", "category"):
+                    for item in cart_items:
+                        match = False
+                        if rule.scope == "product" and rule.selector and "product_ids" in rule.selector:
+                            match = item["product_id"] in rule.selector["product_ids"]
+                        if rule.scope == "category" and rule.selector and "categories" in rule.selector:
+                            match = (item.get("category") in rule.selector["categories"]) if item.get("category") else False
+                        if match:
+                            if rule.type == "percent":
+                                discount_total += item["line_total"] * (rule.amount / 100.0)
+                            else:
+                                discount_total += rule.amount
+            discount_total = round(max(0.0, discount_total), 2)
+            return {"subtotal": round(subtotal, 2), "discount_total": discount_total}
+
+    def calculate_shipping(self, store_id: int, subtotal: float) -> float:
+        with self.get_session() as session:
+            rules = (
+                session.query(ShippingRule)
+                .filter(ShippingRule.store_id == store_id, ShippingRule.active == True)
+                .order_by(ShippingRule.min_subtotal.asc())
+                .all()
+            )
+            for rule in rules:
+                lower_ok = subtotal >= (rule.min_subtotal or 0)
+                upper_ok = True if rule.max_subtotal is None else subtotal <= rule.max_subtotal
+                if lower_ok and upper_ok:
+                    return float(rule.rate or 0.0)
+            return 0.0
+
+    def list_cart(self, session_id: str) -> Dict[str, Any]:
+        with self.get_session() as session:
+            rows = (
+                session.query(CartItem, Product)
+                .join(Product, CartItem.product_id == Product.id)
+                .filter(CartItem.session_id == session_id)
+                .all()
+            )
+            items = []
+            subtotal = 0.0
+            store_id = None
+            for item, prod in rows:
+                line_total = (item.quantity or 1) * (item.unit_price or 0.0)
+                subtotal += line_total
+                store_id = store_id or prod.store_id
+                items.append({
+                    'id': item.id,
+                    'product_id': prod.id,
+                    'name': prod.name,
+                    'category': prod.category,
+                    'quantity': item.quantity,
+                    'unit_price': item.unit_price,
+                    'line_total': line_total,
+                    'store_id': prod.store_id,
+                })
+            total = round(subtotal, 2)
+            # compute discounts and shipping if store context is present
+            discount_total = 0.0
+            shipping_total = 0.0
+            if store_id:
+                discount_info = self.calculate_discounts(store_id, items)
+                discount_total = float(discount_info["discount_total"]) if discount_info else 0.0
+                shipping_total = self.calculate_shipping(store_id, subtotal - discount_total)
+                total = round(max(0.0, subtotal - discount_total + shipping_total), 2)
+            return {
+                'items': items,
+                'subtotal': round(subtotal, 2),
+                'discount_total': round(discount_total, 2),
+                'shipping_total': round(shipping_total, 2),
+                'total': total,
+                'store_id': store_id,
+            }
+
+    def create_order_from_cart(self, session_id: str, payment_metadata: Optional[Dict[str, Any]] = None) -> Optional[int]:
+        """Create an order from a cart, decrementing inventory and attaching payment.
+        Expects that payment has succeeded (called from webhook or success callback).
+        """
+        with self.get_session() as session:
+            rows = (
+                session.query(CartItem, Product)
+                .join(Product, CartItem.product_id == Product.id)
+                .filter(CartItem.session_id == session_id)
+                .all()
+            )
+            if not rows:
+                return None
+            # Use first product's store
+            store_id = rows[0][1].store_id
+            subtotal = sum((i.quantity or 1) * (i.unit_price or 0.0) for i, _ in rows)
+            # Build cart details for discount/shipping
+            cart_items = []
+            for item, prod in rows:
+                cart_items.append({
+                    'product_id': prod.id,
+                    'name': prod.name,
+                    'category': prod.category,
+                    'quantity': item.quantity,
+                    'unit_price': item.unit_price,
+                    'line_total': (item.quantity or 1) * (item.unit_price or 0.0),
+                })
+            disc_info = self.calculate_discounts(store_id, cart_items)
+            discount_total = float(disc_info["discount_total"]) if disc_info else 0.0
+            shipping_total = self.calculate_shipping(store_id, subtotal - discount_total)
+            total = round(max(0.0, subtotal - discount_total + shipping_total), 2)
+
+            order = Order(
+                order_number=f"ORD-{int(datetime.now().timestamp())}",
+                customer_id=None,
+                warehouse_id=None,
+                status="paid",
+                payment_status="paid",
+                total_amount=total,
+                shipping_total=shipping_total,
+                discount_total=discount_total,
+                store_id=store_id,
+            )
+            session.add(order)
+            session.flush()
+            # Items
+            # collect warehouses of this store for inventory deduction
+            store_warehouses = [wid for (wid,) in session.query(Warehouse.id).filter(Warehouse.store_id == store_id).all()]
+            for item, prod in rows:
+                oi = OrderItem(
+                    order_id=order.id,
+                    product_id=prod.id,
+                    quantity=item.quantity or 1,
+                    unit_price=item.unit_price or 0.0,
+                    name=prod.name,
+                    sku=prod.sku,
+                )
+                session.add(oi)
+                # decrement inventory preferring this store's warehouses
+                target_inv = None
+                if store_warehouses:
+                    target_inv = (
+                        session.query(InventoryItem)
+                        .filter(InventoryItem.sku == prod.sku, InventoryItem.warehouse_id.in_(store_warehouses))
+                        .order_by(InventoryItem.quantity.desc())
+                        .first()
+                    )
+                if not target_inv:
+                    target_inv = session.query(InventoryItem).filter(InventoryItem.sku == prod.sku).first()
+                if target_inv and (target_inv.quantity is not None):
+                    target_inv.quantity = max(0, (target_inv.quantity or 0) - (item.quantity or 1))
+                    session.add(target_inv)
+            # Payment record
+            pay = Payment(
+                order_id=order.id,
+                provider="stripe",
+                status="succeeded",
+                amount=total,
+                currency="USD",
+                payment_metadata=payment_metadata or {},
+            )
+            session.add(pay)
+            # Clear cart
+            session.query(CartItem).filter(CartItem.session_id == session_id).delete()
+            return order.id

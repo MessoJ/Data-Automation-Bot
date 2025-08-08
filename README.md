@@ -393,3 +393,14 @@ Ready to transform your e-commerce business with the most advanced automation pl
 **Transform your multi-platform e-commerce business with automated data sync that actually works - and looks beautiful doing it.** 
 
 *Built with ❤️ by e-commerce professionals, for e-commerce professionals.*
+
+## Landing Page SVG Assets
+
+The following SVGs are used in the landing page and stored in `/web/static/images/`:
+
+- **undraw_dark_hero.svg**: Custom illustration inspired by [unDraw](https://undraw.co/), MIT License.
+- **github.svg**: [GitHub logo from Simple Icons](https://simpleicons.org/icons/github.svg), licensed under the [CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/).
+- **slack.svg**: [Slack logo from Simple Icons](https://simpleicons.org/icons/slack.svg), licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+- **discord.svg**: [Discord logo from Simple Icons](https://simpleicons.org/icons/discord.svg), licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
+All SVGs are optimized for web use and accessibility best practices are followed (alt text, ARIA roles, lazy loading where appropriate).

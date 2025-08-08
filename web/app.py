@@ -80,15 +80,38 @@ def create_app():
     @app.route('/')
     def index():
         """Root route - redirect to landing page or dashboard based on context."""
-        return redirect(url_for('dashboard'))
+        return redirect('/web/')
     
     @app.route('/web/')
     def dashboard():
         try:
+            root_path = os.path.abspath(os.path.join(app.root_path, '..'))
+            react_dist = os.path.join(root_path, 'frontend', 'dist')
+            index_path = os.path.join(react_dist, 'index.html')
+            if os.path.exists(index_path):
+                return send_file(index_path)
+            # Fallback to legacy template if dist not built
             return render_template('dashboard.html')
         except Exception as e:
             logger.error(f"Dashboard error: {e}")
             return jsonify({'error': f'Dashboard error: {str(e)}'}), 500
+
+    @app.route('/web/<path:path>')
+    def web_assets(path: str):
+        try:
+            root_path = os.path.abspath(os.path.join(app.root_path, '..'))
+            react_dist = os.path.join(root_path, 'frontend', 'dist')
+            file_path = os.path.join(react_dist, path)
+            if os.path.exists(file_path):
+                return send_from_directory(react_dist, path)
+            # SPA fallback
+            index_path = os.path.join(react_dist, 'index.html')
+            if os.path.exists(index_path):
+                return send_file(index_path)
+            return jsonify({'error': 'frontend build not found'}), 404
+        except Exception as e:
+            logger.error(f"Web assets error: {e}")
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/checkout')
     def checkout_page():

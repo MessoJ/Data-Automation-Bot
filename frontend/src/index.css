@@ -6,8 +6,11 @@
 html, body, #root { height: 100%; }
 body { @apply bg-neutral-950 text-neutral-100 antialiased; }
 
-/* Reusable cards */
-.card { @apply rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm; }
-.btn { @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition; }
+/* Reusable surfaces */
+.card { @apply rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm shadow-sm; }
+
+/* Controls */
+.btn { @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-0; }
 .btn-primary { @apply bg-brand text-white hover:bg-brand-dark; }
 .btn-secondary { @apply bg-neutral-800 text-neutral-100 hover:bg-neutral-700; }
+.input { @apply bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-neutral-100 placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40; }
